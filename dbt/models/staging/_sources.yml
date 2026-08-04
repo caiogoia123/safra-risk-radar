@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Tables loaded verbatim from the public sources by `python -m ingestion`.
+    # DuckDB uses a plain schema; BigQuery needs the dataset name.
+    schema: "{{ 'raw' if target.type == 'duckdb' else 'safra_raw' }}"
+    tables:
+      - name: conab_grain_series
+        description: >
+          CONAB grain series - planted area, production and yield by state, crop
+          and season, from 1976/77 onward. The latest season is a survey
+          estimate, not a realized harvest.
+        columns:
+          - name: crop_year
+            description: "Two formats: 'YYYY/YY' for summer crops, 'YYYY' for winter crops."
+            tests:
+              - not_null
+          - name: season_label
+            description: UNICA, 1ª SAFRA, 2ª SAFRA or 3ª SAFRA.
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ["UNICA", "1ª SAFRA", "2ª SAFRA", "3ª SAFRA"]
+          - name: state_code
+            tests:
+              - not_null
+          - name: crop_name
+            tests:
+              - not_null

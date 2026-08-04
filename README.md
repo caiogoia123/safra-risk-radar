@@ -74,13 +74,19 @@ production from PAM locates the real producing belt, and weather is sampled and 
 ## Reproducing
 
 ```bash
-python -m venv .venv && .venv/Scripts/activate
+python -m venv .venv
+.venv/Scripts/activate
 pip install -r requirements.txt
-python -m ingestion          # downloads sources into data/
-cd dbt && dbt build          # DuckDB target by default
+python -m ingestion              # download sources, load into DuckDB
+cd dbt
+dbt build                        # DuckDB target by default
 ```
 
 `data/` is gitignored — the ingestion step rebuilds it from the public sources.
+
+To run against BigQuery instead, set `GCP_KEYFILE` and `GCP_PROJECT` (see `.env.example`),
+then `python -m ingestion --target prod` and `dbt build --target prod`. dbt commands run from
+inside `dbt/`, since the DuckDB path is relative to the working directory.
 
 ## Known limitations
 

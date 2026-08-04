@@ -1,0 +1,26 @@
+name: safra_risk_radar
+version: 1.0.0
+config-version: 2
+
+profile: safra_risk_radar
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  safra_risk_radar:
+    # Tables everywhere: the dataset is small, and the BigQuery sandbox rejects
+    # DML, which rules out incremental models and snapshots.
+    +materialized: table
+    staging:
+      +schema: staging
+    intermediate:
+      +schema: intermediate
+    marts:
+      +schema: marts

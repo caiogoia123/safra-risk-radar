@@ -1,0 +1,28 @@
+# Two targets, one project.
+#   dev  -> DuckDB, local file, no credentials, no cost
+#   prod -> BigQuery sandbox (no billing account attached)
+#
+# The BigQuery keyfile path comes from an environment variable so no personal
+# path or credential ever lands in this repository. See .env.example.
+
+safra_risk_radar:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Relative to the working directory, so dbt commands are run from dbt/.
+      # Override with DUCKDB_PATH when calling from somewhere else (e.g. CI).
+      path: "{{ env_var('DUCKDB_PATH', '../data/dev.duckdb') }}"
+      threads: 4
+
+    prod:
+      type: bigquery
+      method: service-account
+      keyfile: "{{ env_var('GCP_KEYFILE') }}"
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: safra
+      location: southamerica-east1
+      threads: 4
+      priority: interactive
+      job_execution_timeout_seconds: 300
+      job_retries: 1

@@ -111,33 +111,65 @@ serve para achar onde a produção realmente está e ponderar o clima por produ�
 
 | Semana | Entrega | Feito? |
 |---|---|---|
-| 1 | Repo, ingestão CONAB + PAM + POWER, camada raw | parcial — CONAB pronta |
-| 2 | dbt staging + intermediate (normais climatológicas, janelas) | |
+| 1 | Repo, ingestão CONAB + PAM + POWER, camada raw | parcial — CONAB pronta, PAM e POWER faltando |
+| 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
 | 3 | Marts + testes dbt + análise exploratória (achar o insight) | |
 | 4 | Modelo, backtest temporal, comparação com baseline | |
 | 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | |
 | 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
 
-## 8. Estado atual (04/08/2026)
+## 8. Como rodar
 
-**Funcionando:**
-- `.venv` com dbt-core 1.12.0 + dbt-duckdb 1.10.1 + duckdb 1.5.5 no Python 3.14.5
-- `ingestion/conab.py` — baixa, converte para Parquet e valida. 28.447 linhas.
+Os comandos dbt rodam **de dentro de `dbt/`** — o caminho do DuckDB no `profiles.yml` é
+relativo ao diretório de trabalho (`--project-dir` não muda o cwd; já tropeçamos nisso).
 
-**Ainda não existe:** ingestão PAM e POWER, projeto dbt, modelo, app, CI, repo no GitHub.
+```powershell
+# uma vez por sessão, só se for usar o BigQuery
+$env:GCP_KEYFILE = "C:\Users\caio.prado\.gcp\safra-risk-radar.json"
+$env:GCP_PROJECT = "safra-risk-radar"
+
+python -m ingestion --target dev      # baixa as fontes e carrega no DuckDB
+python -m ingestion --target prod     # carrega no BigQuery
+
+cd dbt
+..\.venv\Scripts\dbt build --target dev
+..\.venv\Scripts\dbt build --target prod
+```
+
+## 9. Estado atual (04/08/2026)
+
+**Funcionando de ponta a ponta, nos dois targets:**
+- `.venv` com dbt-core 1.12.0 + dbt-duckdb 1.10.1 + dbt-bigquery 1.12.0 no Python 3.14.5
+- `ingestion/conab.py` → Parquet → `ingestion/warehouse.py` → DuckDB **e** BigQuery
+- `dbt build` verde nos dois: 1 modelo (`stg_conab_grain`, 11.000 linhas) e 5 testes
+- BigQuery consumiu 1,7 MiB da cota mensal de 1 TB
+
+**Ainda não existe:** ingestão PAM e POWER, camadas intermediate e marts, modelo, app, CI.
 
 **Próximo passo concreto:** `ingestion/ibge_pam.py` — produção municipal de soja e milho para
 achar os polos produtores de cada UF, que definem os pontos de consulta do NASA POWER.
 
-### Pendências que dependem do Caio
-- **Conta GCP** (free tier) para o target BigQuery. Criar com o gmail pessoal e gerar uma
-  service account key. Não commitar o JSON — o `.gitignore` já bloqueia.
-- **Criar o repo `safra-risk-radar` no GitHub** (público). Não tem `gh` CLI nesta máquina,
-  então: criar pelo site e depois `git remote add origin`.
+### Infra resolvida (não repetir a pesquisa)
+- **BigQuery sandbox**: sem cartão, sem conta de faturamento. 1 TB de consulta e 10 GB de
+  armazenamento por mês; ao estourar, bloqueia em vez de cobrar. Upgrade é manual.
+- **Conta de serviço funciona no sandbox** — a documentação não dizia, foi testado e funciona.
+  Chave em `C:\Users\caio.prado\.gcp\safra-risk-radar.json`, fora do repo.
+- **Tabelas expiram em 60 dias** no sandbox, mas cada `dbt build` recria e zera o relógio.
+  O CI agendado da semana 5 mantém tudo vivo sozinho.
+- **Sem DML no sandbox** — por isso tudo é `materialized: table`; `incremental` e `snapshot`
+  não funcionariam lá.
+- Dataset `safra_raw` (carga) e `safra_staging`/`safra_marts` (dbt), todos em
+  `southamerica-east1`. Região não pode ser trocada sem recriar o dataset.
 
-## 9. Log de sessões
+## 10. Log de sessões
 
 **04/08/2026 — sessão 1 (trabalho)**
 Escolhido o projeto entre 4 alternativas. Ambiente validado (Python 3.14, git, rede liberada
 para IBGE/CONAB/NASA/PyPI/GitHub). Maior risco técnico afastado: dbt instala no Python 3.14.
 Três fontes sondadas com dado real. Escopo fechado e ingestão da CONAB entregue.
+Repo publicado em github.com/caiogoia123/safra-risk-radar.
+Conta GCP criada (sandbox) e **fatia vertical fechada**: CONAB → Parquet → DuckDB + BigQuery →
+`dbt build` verde nos dois targets, com 5 testes passando.
+Sondagem do PAM municipal deu certo (1.996 linhas para o PR em 5,5s) e o NASA POWER é barato
+(2s por ponto, ~4 min para 100 pontos). **Pendência aberta: a API de malhas do IBGE não devolveu
+o GeoJSON no formato esperado** — falta achar outra fonte para os centroides dos municípios.
