@@ -42,6 +42,21 @@ sources:
             tests:
               - not_null
 
+      - name: nasa_power_daily
+        description: >
+          NASA POWER daily weather per grid cell since 1991. Fill values (-999)
+          are already converted to null during ingestion.
+        columns:
+          - name: date
+            tests:
+              - not_null
+          - name: grid_latitude
+            tests:
+              - not_null
+          - name: grid_longitude
+            tests:
+              - not_null
+
       - name: producer_hubs
         description: >
           Municipalities carrying 80% of each state's grain production, with the

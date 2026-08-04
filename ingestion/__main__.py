@@ -2,7 +2,7 @@
 
 import argparse
 
-from . import conab, geo, ibge_pam, warehouse
+from . import conab, geo, ibge_pam, nasa_power, warehouse
 
 
 def main() -> None:
@@ -15,6 +15,8 @@ def main() -> None:
     ibge_pam.run(force=args.force)
     # Depends on the PAM output: hubs are ranked before their centroids are fetched.
     geo.run(force=args.force)
+    # Depends on the hubs: one weather request per distinct grid cell.
+    nasa_power.run(force=args.force)
     warehouse.run(target=args.target)
 
 

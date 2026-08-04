@@ -96,6 +96,22 @@ o município típico ~40 km: a grade é maior que o município, então centroide
 a célula consultada. Pelo mesmo motivo dá para **deduplicar por célula** — 510 polos viram 255
 consultas de clima (economia de 50%).
 
+### ⚠️ Armadilha: fan-out no join polo → célula
+A relação é **muitos-para-um** e o fator varia MUITO por UF:
+
+| UF | polos | células | fan-out |
+|---|---|---|---|
+| PR | 165 | 50 | **3,30** |
+| RS | 163 | 63 | **2,59** |
+| MG | 76 | 49 | 1,55 |
+| MT | 39 | 38 | 1,03 |
+| BA | 6 | 6 | 1,00 |
+
+Somar chuva depois desse join **triplica o total do PR e não muda o da BA** — o erro é silencioso
+e enviesado por região, exatamente o pior tipo. Já caí nele: a primeira validação deu 5.350 mm/ano
+no PR (o real é ~1.620). Qualquer agregação de clima precisa **deduplicar por célula antes de
+somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru pós-join.
+
 ### Armadilhas já encontradas na CONAB
 1. **`crop_year` tem dois formatos**: `1976/77` (verão) e `1976` (inverno: trigo, aveia, cevada,
    centeio, canola, triticale). Normalizar no staging.
@@ -155,16 +171,21 @@ cd dbt
 
 **Funcionando de ponta a ponta:**
 - `.venv` com dbt-core 1.12.0 + dbt-duckdb 1.10.1 + dbt-bigquery 1.12.0 no Python 3.14.5
-- `python -m ingestion` roda CONAB → PAM → polos/centroides → warehouse
-- 3 tabelas raw: `conab_grain_series` (28.447), `ibge_pam_municipal` (26.320), `producer_hubs` (510)
-- `dbt build --target dev`: **12/12 verde**, 1 modelo (`stg_conab_grain`, 11.000 linhas)
-- BigQuery já rodou o mesmo build; consumiu 1,7 MiB da cota mensal de 1 TB
+- `python -m ingestion` roda CONAB → PAM → polos/centroides → NASA POWER → warehouse
+- 4 tabelas raw: `conab_grain_series` (28.447), `ibge_pam_municipal` (26.320),
+  `producer_hubs` (510), `nasa_power_daily` (**3.313.215**, 1991-01-01 → 2026-07-28)
+- 3 modelos staging: `stg_conab_grain`, `stg_producer_hubs`, `stg_weather_daily`
+- `dbt build --target dev`: **17/17 verde**
+- Chave do BigQuery rotacionada em 04/08 e `dbt debug --target prod` passando
 
-**Ainda não existe:** ingestão do NASA POWER, camadas intermediate e marts, modelo, app, CI.
+**Validação geográfica do clima (passou):** o gradiente de geada ordena RS (-6,1 °C, 79.501
+dias com mínima ≤ 3 °C) → PR → MS → MG → GO → MT (2,0 °C, 2 dias) → BA (10,2 °C, zero).
+Chuva anual por UF entre 1.112 mm (oeste baiano) e 1.655 mm (MT), tudo plausível.
 
-**Próximo passo concreto:** `ingestion/nasa_power.py` — clima diário nas 255 células de grade
-(~2s cada, ~8 min na primeira vez, com cache em disco). Daí saem as normais de 1991–2020 e as
-anomalias por janela fenológica.
+**Ainda não existe:** camadas intermediate e marts, modelo, app, CI.
+
+**Próximo passo concreto:** janelas fenológicas por cultura × UF (ver seção 11), depois
+`int_weather_by_window` e as anomalias contra a normal de 1991–2020.
 
 ### Infra resolvida (não repetir a pesquisa)
 - **BigQuery sandbox**: sem cartão, sem conta de faturamento. 1 TB de consulta e 10 GB de
@@ -178,7 +199,23 @@ anomalias por janela fenológica.
 - Dataset `safra_raw` (carga) e `safra_staging`/`safra_marts` (dbt), todos em
   `southamerica-east1`. Região não pode ser trocada sem recriar o dataset.
 
-## 10. Log de sessões
+## 10. Pendência aberta: janelas fenológicas
+
+O próximo modelo precisa saber **qual período de cada safra é a janela crítica**, por cultura e
+por UF. É conhecimento agronômico com fonte oficial (calendário de plantio e colheita da CONAB),
+e o Caio trabalha no agro — perguntar a ele antes de assumir. Tentei buscar em 04/08 e a busca
+web estava fora do ar.
+
+O que precisa ser definido:
+- **Soja**: meses de plantio e, principalmente, de enchimento de grão (a fase sensível à seca),
+  por UF — o MT planta bem antes do RS.
+- **Milho 2ª safra**: plantio depende da colheita da soja; a floração é a fase crítica.
+  A janela de risco é o fim das chuvas (veranico de abril/maio).
+
+Vai virar um **seed CSV** no dbt (`seeds/crop_windows.csv`), para ficar versionado e auditável
+em vez de escondido dentro de um SQL.
+
+## 11. Log de sessões
 
 **04/08/2026 — sessão 1 (trabalho)**
 Escolhido o projeto entre 4 alternativas. Ambiente validado (Python 3.14, git, rede liberada
@@ -194,5 +231,7 @@ tempo todo — eu é que passava `qualidade=1`, parâmetro inválido para munic�
 400 com um JSON de erro. Meu código procurava `features` nesse corpo de erro e quebrava com
 `KeyError` em vez de checar o status. Lição: sempre `raise_for_status()` antes de ler o payload.
 PAM e polos ingeridos, `dbt build` 12/12 verde.
-**Chave do BigQuery revogada no console mas não substituída** — o target `prod` está fora do ar
-com `invalid_grant` até o Caio gerar a nova chave. Não bloqueia o desenvolvimento em DuckDB.
+Chave do BigQuery **rotacionada e validada** no fim da sessão.
+NASA POWER ingerido: 255 células, 3,3 milhões de linhas, 1991 → jul/2026, 21 fill values (-999)
+convertidos para nulo. `dbt build` 17/17 verde com os 3 modelos de staging.
+Armadilha do fan-out polo → célula descoberta durante a validação e documentada na seção 5.
