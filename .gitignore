@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data (regenerate with: python -m ingestion)
+data/
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+logs/
+
+# Credentials - NEVER commit
+*.json.key
+service-account*.json
+.env
+.env.*
+!.env.example
+
+# OS / editors
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,14 @@
+# Core pipeline
+duckdb==1.5.5
+dbt-core==1.12.0
+dbt-duckdb==1.10.1
+pandas==3.0.5
+requests==2.34.2
+
+# Cloud warehouse target (prod) - uncomment when the GCP project exists
+# dbt-bigquery==1.10.*
+
+# Modeling & app (added in weeks 4-5)
+# scikit-learn
+# streamlit
+# plotly
