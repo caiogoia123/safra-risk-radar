@@ -210,10 +210,20 @@ com dias secos sobe de -0,26 para **-0,48**, enquanto a soja fica estável em ~-
 recortes (a soja cresce perto de uma reta — 2.212 → 3.501).
 Encaminhamento para a semana 4: tendência não-linear, início mais tarde, ou os dois.
 
-**Ainda não existe:** modelo preditivo, app, CI.
+**Ainda não existe:** modelo preditivo, app Streamlit, CI.
 
-**Próximo passo concreto:** dias secos consecutivos (a métrica de veranico, que exige
-gaps-and-islands por célula) e o modelo com validação temporal.
+### Próximos passos, em ordem
+1. **Dias secos consecutivos** por célula (gaps-and-islands em SQL) — é a métrica que captura
+   veranico de verdade e deve ser a variável mais forte do conjunto.
+2. **Modelo preditivo** com validação temporal (ver seção 11) — e resolver o detrend não-linear
+   da safrinha antes de treinar.
+3. **App Streamlit** publicado no Community Cloud.
+4. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias).
+5. README final liderado pelo achado + post no LinkedIn.
+
+### Git
+Tudo commitado e no GitHub até `73444a1` (04/08/2026). **O Caio faz todos os commits** —
+entregar os comandos prontos, nunca executar ([[preferencias]] na memória nativa).
 
 ### Infra resolvida (não repetir a pesquisa)
 - **BigQuery sandbox**: sem cartão, sem conta de faturamento. 1 TB de consulta e 10 GB de
@@ -291,7 +301,44 @@ A propriedade útil: para a safra de colheita `Y`, o índice `s` é o mês absol
 nos dois ramos. Assim toda a aritmética de data vira soma de inteiros — sem construir datas,
 o que também mantém o SQL portátil (DuckDB tem `make_date()`, BigQuery tem `DATE()`).
 
-## 11. Log de sessões
+## 11. Modelo preditivo — o que exatamente se prevê
+
+Ponto que gerou confusão na conversa de 04/08 e precisa ficar explícito:
+**clima é ENTRADA, não saída. Não se prevê tempo.**
+
+```
+ENTRA:  clima que JÁ aconteceu (medido pelo NASA POWER, já na base)
+   ↓
+SAI:    produtividade que ainda NÃO foi divulgada pela CONAB
+```
+
+- **Alvo:** `yield_residual_pct` — o desvio percentual da produtividade contra a tendência
+  do próprio estado. Não a produtividade absoluta: um modelo treinado no nível só redescobre
+  o ganho tecnológico, exibe métrica boa e não serve para nada.
+- **Grão:** UF × cultura × safra.
+- **Features:** as anomalias já prontas no `fct_season_risk` (dias secos, chuva, temperatura,
+  graus-dia), cada uma medida contra a normal do próprio estado.
+- **Baseline obrigatório:** "a safra vai ser igual à tendência" (resíduo = 0). Se o modelo com
+  clima não bater esse chute, **publica-se esse resultado** — é o padrão do `alpha-validation-lab`.
+- **Validação:** treina até a safra `t`, testa em `t+1`. Nunca embaralhado.
+
+**Por que isso tem valor:** o número oficial sai meses depois de o clima ter acontecido, e é
+nesse vão que trading, crédito rural e seguro agrícola decidem. Exemplo real da própria base:
+o clima de abr–ago/2021 no PR (chuva a -2 desvios, 19 dias secos a mais) era fato medido muito
+antes de a CONAB fechar a produtividade que veio 51% abaixo da tendência.
+
+### Decisão em aberto para o Caio
+Rodar o modelo sobre a **janela crítica completa** (mais preciso, quase sem antecedência — para
+soja a janela fecha junto com a colheita) ou sobre a **janela parcial** (ex.: só o clima até
+janeiro para prever o resultado de abril; menos preciso, mas com o valor real de antecipar)?
+
+Recomendação: fazer os dois e medir **quanto de precisão se perde por mês de antecedência
+ganho**. Vira um gráfico forte no dashboard. Na janela parcial os meses futuros entram como
+clima normal, e a incerteza sobe — precisa estar declarado.
+
+Também dá para estimar a **safra corrente (2025/26)**, que na base ainda é estimativa da CONAB.
+
+## 12. Log de sessões
 
 **04/08/2026 — sessão 1 (trabalho)**
 Escolhido o projeto entre 4 alternativas. Ambiente validado (Python 3.14, git, rede liberada
