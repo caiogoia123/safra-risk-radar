@@ -74,12 +74,27 @@ O Streamlit Community Cloud publica direto do repo do GitHub, de graça.
 | Fonte | O que dá | Formato | Status |
 |---|---|---|---|
 | CONAB Série Histórica de Grãos | área, produção, produtividade por UF × cultura × safra, 1976/77→2025/26 | TXT `;` latin-1 | **validada e ingerida** |
-| IBGE SIDRA 1612 (PAM) | produção **municipal** anual, 1974→2024 | API JSON | validada (metadados + amostra) |
-| NASA POWER daily | T2M, T2M_MAX, T2M_MIN, precipitação, radiação por ponto | API JSON | validada (amostra) |
+| IBGE SIDRA 1612 (PAM) | produção **municipal** anual, 1974→2024 | API JSON | **ingerida** — 26.320 linhas, 2.632 municípios |
+| IBGE malhas v3 | contorno do município (para o centroide) | GeoJSON | **ingerida** — 510 centroides em cache |
+| NASA POWER daily | T2M, T2M_MAX, T2M_MIN, precipitação, radiação por ponto | API JSON | validada (amostra); 2s por ponto |
 
 **Por que o PAM entra se a fato é estadual:** o clima do centroide da UF não representa a área
 agrícola (o centroide do MT cai em floresta; o da BA, na caatinga não irrigada). O PAM municipal
 serve para achar onde a produção realmente está e ponderar o clima por produção.
+
+### Seleção dos polos produtores (`ingestion/geo.py`)
+Por UF, municípios ordenados por produção média de grãos (soja + milho somados, porque a
+safrinha ocupa o mesmo talhão), acumulando até **80% da produção estadual**. Dá 510 polos.
+
+**O teto por UF não pode ser baixo.** Com teto de 25 a cobertura saía absurdamente desigual:
+82% na BA (6 municípios bastam, tudo concentrado no oeste baiano) contra **26% no PR** e 29% no
+RS, que são pulverizados — 165 municípios para os mesmos 80%. Isso sub-amostraria justamente o
+Sul, onde a variabilidade climática é maior (geada, estiagem). O teto virou salvaguarda em 250.
+
+**Centroide = centro da caixa delimitadora, de propósito.** A grade do NASA POWER tem ~55 km e
+o município típico ~40 km: a grade é maior que o município, então centroide de área não mudaria
+a célula consultada. Pelo mesmo motivo dá para **deduplicar por célula** — 510 polos viram 255
+consultas de clima (economia de 50%).
 
 ### Armadilhas já encontradas na CONAB
 1. **`crop_year` tem dois formatos**: `1976/77` (verão) e `1976` (inverno: trigo, aveia, cevada,
@@ -138,16 +153,18 @@ cd dbt
 
 ## 9. Estado atual (04/08/2026)
 
-**Funcionando de ponta a ponta, nos dois targets:**
+**Funcionando de ponta a ponta:**
 - `.venv` com dbt-core 1.12.0 + dbt-duckdb 1.10.1 + dbt-bigquery 1.12.0 no Python 3.14.5
-- `ingestion/conab.py` → Parquet → `ingestion/warehouse.py` → DuckDB **e** BigQuery
-- `dbt build` verde nos dois: 1 modelo (`stg_conab_grain`, 11.000 linhas) e 5 testes
-- BigQuery consumiu 1,7 MiB da cota mensal de 1 TB
+- `python -m ingestion` roda CONAB → PAM → polos/centroides → warehouse
+- 3 tabelas raw: `conab_grain_series` (28.447), `ibge_pam_municipal` (26.320), `producer_hubs` (510)
+- `dbt build --target dev`: **12/12 verde**, 1 modelo (`stg_conab_grain`, 11.000 linhas)
+- BigQuery já rodou o mesmo build; consumiu 1,7 MiB da cota mensal de 1 TB
 
-**Ainda não existe:** ingestão PAM e POWER, camadas intermediate e marts, modelo, app, CI.
+**Ainda não existe:** ingestão do NASA POWER, camadas intermediate e marts, modelo, app, CI.
 
-**Próximo passo concreto:** `ingestion/ibge_pam.py` — produção municipal de soja e milho para
-achar os polos produtores de cada UF, que definem os pontos de consulta do NASA POWER.
+**Próximo passo concreto:** `ingestion/nasa_power.py` — clima diário nas 255 células de grade
+(~2s cada, ~8 min na primeira vez, com cache em disco). Daí saem as normais de 1991–2020 e as
+anomalias por janela fenológica.
 
 ### Infra resolvida (não repetir a pesquisa)
 - **BigQuery sandbox**: sem cartão, sem conta de faturamento. 1 TB de consulta e 10 GB de
@@ -171,5 +188,11 @@ Repo publicado em github.com/caiogoia123/safra-risk-radar.
 Conta GCP criada (sandbox) e **fatia vertical fechada**: CONAB → Parquet → DuckDB + BigQuery →
 `dbt build` verde nos dois targets, com 5 testes passando.
 Sondagem do PAM municipal deu certo (1.996 linhas para o PR em 5,5s) e o NASA POWER é barato
-(2s por ponto, ~4 min para 100 pontos). **Pendência aberta: a API de malhas do IBGE não devolveu
-o GeoJSON no formato esperado** — falta achar outra fonte para os centroides dos municípios.
+(2s por ponto).
+Pendência dos centroides **resolvida na mesma sessão**: a API de malhas do IBGE funcionava o
+tempo todo — eu é que passava `qualidade=1`, parâmetro inválido para município, e a API devolve
+400 com um JSON de erro. Meu código procurava `features` nesse corpo de erro e quebrava com
+`KeyError` em vez de checar o status. Lição: sempre `raise_for_status()` antes de ler o payload.
+PAM e polos ingeridos, `dbt build` 12/12 verde.
+**Chave do BigQuery revogada no console mas não substituída** — o target `prod` está fora do ar
+com `invalid_grant` até o Caio gerar a nova chave. Não bloqueia o desenvolvimento em DuckDB.

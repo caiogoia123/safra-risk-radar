@@ -29,3 +29,31 @@ sources:
           - name: crop_name
             tests:
               - not_null
+
+      - name: ibge_pam_municipal
+        description: >
+          IBGE PAM (SIDRA 1612) municipal production for soybean and corn,
+          2020-2024, across the seven states in scope.
+        columns:
+          - name: municipality_id
+            tests:
+              - not_null
+          - name: year
+            tests:
+              - not_null
+
+      - name: producer_hubs
+        description: >
+          Municipalities carrying 80% of each state's grain production, with the
+          coordinates used to sample weather, snapped to the NASA POWER grid.
+        columns:
+          - name: municipality_id
+            tests:
+              - not_null
+              - unique
+          - name: latitude
+            tests:
+              - not_null
+          - name: longitude
+            tests:
+              - not_null

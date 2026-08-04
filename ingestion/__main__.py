@@ -2,7 +2,7 @@
 
 import argparse
 
-from . import conab, warehouse
+from . import conab, geo, ibge_pam, warehouse
 
 
 def main() -> None:
@@ -12,6 +12,9 @@ def main() -> None:
     args = parser.parse_args()
 
     conab.run(force=args.force)
+    ibge_pam.run(force=args.force)
+    # Depends on the PAM output: hubs are ranked before their centroids are fetched.
+    geo.run(force=args.force)
     warehouse.run(target=args.target)
 
 
