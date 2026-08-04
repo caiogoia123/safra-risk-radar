@@ -199,21 +199,58 @@ Chuva anual por UF entre 1.112 mm (oeste baiano) e 1.655 mm (MT), tudo plausíve
 - Dataset `safra_raw` (carga) e `safra_staging`/`safra_marts` (dbt), todos em
   `southamerica-east1`. Região não pode ser trocada sem recriar o dataset.
 
-## 10. Pendência aberta: janelas fenológicas
+## 10. Calendário agrícola (resolvido — fonte oficial)
 
-O próximo modelo precisa saber **qual período de cada safra é a janela crítica**, por cultura e
-por UF. É conhecimento agronômico com fonte oficial (calendário de plantio e colheita da CONAB),
-e o Caio trabalha no agro — perguntar a ele antes de assumir. Tentei buscar em 04/08 e a busca
-web estava fora do ar.
+Os meses de plantio e colheita por cultura × UF vêm do **Calendário de Plantio e Colheita de
+Grãos no Brasil (CONAB, 2022)**, o PDF oficial. Viraram o seed `dbt/seeds/crop_calendar.csv`.
 
-O que precisa ser definido:
-- **Soja**: meses de plantio e, principalmente, de enchimento de grão (a fase sensível à seca),
-  por UF — o MT planta bem antes do RS.
-- **Milho 2ª safra**: plantio depende da colheita da soja; a floração é a fase crítica.
-  A janela de risco é o fim das chuvas (veranico de abril/maio).
+**Não foram digitados à mão.** O PDF codifica os meses como **barras coloridas**, não texto —
+o texto da página só tem as siglas das UFs e os cabeçalhos dos meses. O
+`scripts/extract_conab_calendar.py` lê a geometria: a cor da barra dá a fase (laranja = plantio,
+azul = colheita, verde = ambos) e o intervalo horizontal dela diz quais colunas de mês cobre.
+Rodar de novo só quando a CONAB publicar edição nova.
 
-Vai virar um **seed CSV** no dbt (`seeds/crop_windows.csv`), para ficar versionado e auditável
-em vez de escondido dentro de um SQL.
+### ⚠️ Armadilha: o calendário é circular
+As colunas vão de **Out a Set**, então Out/Nov/Dez são do ano anterior ao da colheita
+(safra 2023/24 → `harvest_year` 2024, e o outubro dela é outubro de 2023). O problema está no
+**setembro**: quando o plantio da soja começa em setembro, a barra aparece na **última** coluna,
+mas se refere ao setembro *anterior* a outubro. Tratado como offset 0, a janela de plantio do MT
+ficaria **onze meses fora do lugar**.
+
+Regra aplicada: setembro volta para o ano anterior **só quando emenda contiguamente em outubro
+dentro da mesma fase**. Isso corrige a soja do MT e do PR (plantio set–dez) sem estragar a
+colheita da safrinha em MS e PR (jun–set), onde setembro é mesmo do ano da colheita.
+
+### O que a CONAB diz (extraído)
+| Cultura | UF | Plantio | Colheita |
+|---|---|---|---|
+| Soja | MT | set–dez | jan–abr |
+| Soja | GO, MG, MS | out–dez | jan–abr |
+| Soja | PR | set–jan | jan–mai |
+| Soja | RS | out–jan | fev–mai |
+| Soja | BA | out–jan | jan–mai |
+| Milho 2ª safra | MT | jan–mar | mai–ago |
+| Milho 2ª safra | GO | jan–fev | jun–ago |
+| Milho 2ª safra | MG, MS | jan–mar | jun–set |
+| Milho 2ª safra | PR | jan–abr | mai–set |
+| Milho 2ª safra | BA | mar | jul–ago |
+
+**O RS não tem calendário de milho 2ª safra na CONAB** — o estado não faz safrinha relevante.
+Ele fica fora dessa metade da análise, e isso precisa aparecer no README como recorte, não
+como dado faltando.
+
+Ciclo da soja, da mesma publicação: **105 a 135 dias**.
+
+### Ainda a definir: a janela crítica
+O calendário dá plantio e colheita, não a fase de enchimento de grão — que é a sensível à seca.
+Ela precisa ser **derivada**, e a derivação é uma decisão de modelagem, não um dado oficial:
+por isso o seed guarda só o que a CONAB publica, e a janela crítica sai de uma regra explícita
+no dbt, fácil de revisar.
+
+Proposta a validar: a fase crítica ocupa os meses entre o fim do plantio e o início da colheita,
+estendida um mês para trás a partir da colheita (o enchimento antecede a colheita imediatamente).
+Para a soja do MT isso dá dez–mar; para a safrinha do MT, abr–mai, que é justamente a janela do
+veranico. Vale conferir com o Caio, que é do agro.
 
 ## 11. Log de sessões
 

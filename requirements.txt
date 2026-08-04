@@ -5,8 +5,12 @@ dbt-duckdb==1.10.1
 pandas==3.0.5
 requests==2.34.2
 
-# Cloud warehouse target (prod) - uncomment when the GCP project exists
-# dbt-bigquery==1.10.*
+# Cloud warehouse target (prod)
+dbt-bigquery==1.12.0
+
+# Only needed by scripts/extract_conab_calendar.py, which reads the planting
+# calendar out of CONAB's PDF. Not used by the pipeline itself.
+pdfplumber==0.11.10
 
 # Modeling & app (added in weeks 4-5)
 # scikit-learn

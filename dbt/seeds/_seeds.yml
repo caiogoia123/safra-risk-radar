@@ -1,0 +1,50 @@
+version: 2
+
+seeds:
+  - name: crop_calendar
+    description: >
+      Planting and harvest months per crop and state, extracted from CONAB's
+      official "Calendário de Plantio e Colheita de Grãos no Brasil" (2022).
+      Regenerate with scripts/extract_conab_calendar.py when CONAB publishes a
+      new edition - the values are read from the PDF, never typed by hand.
+
+      Rio Grande do Sul is absent from second-crop corn on purpose: CONAB does
+      not list a safrinha calendar for the state.
+    config:
+      column_types:
+        crop_name: varchar
+        state_code: varchar
+        phase: varchar
+        month_number: integer
+        year_offset: integer
+    columns:
+      - name: crop_name
+        description: SOJA or MILHO 2A SAFRA.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["SOJA", "MILHO 2A SAFRA"]
+      - name: state_code
+        tests:
+          - not_null
+      - name: phase
+        description: planting or harvest. A month can be both.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["planting", "harvest"]
+      - name: month_number
+        tests:
+          - not_null
+      - name: year_offset
+        description: >
+          -1 when the month falls in the calendar year before the harvest year,
+          0 when it falls in the harvest year itself. Season 2023/24 has
+          harvest_year 2024, so its October is October 2023.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [-1, 0]

@@ -1,0 +1,94 @@
+crop_name,state_code,phase,month_number,year_offset
+MILHO 2A SAFRA,BA,harvest,7,0
+MILHO 2A SAFRA,BA,harvest,8,0
+MILHO 2A SAFRA,BA,planting,3,0
+MILHO 2A SAFRA,GO,harvest,6,0
+MILHO 2A SAFRA,GO,harvest,7,0
+MILHO 2A SAFRA,GO,harvest,8,0
+MILHO 2A SAFRA,GO,planting,1,0
+MILHO 2A SAFRA,GO,planting,2,0
+MILHO 2A SAFRA,MG,harvest,6,0
+MILHO 2A SAFRA,MG,harvest,7,0
+MILHO 2A SAFRA,MG,harvest,8,0
+MILHO 2A SAFRA,MG,planting,1,0
+MILHO 2A SAFRA,MG,planting,2,0
+MILHO 2A SAFRA,MG,planting,3,0
+MILHO 2A SAFRA,MS,harvest,6,0
+MILHO 2A SAFRA,MS,harvest,7,0
+MILHO 2A SAFRA,MS,harvest,8,0
+MILHO 2A SAFRA,MS,harvest,9,0
+MILHO 2A SAFRA,MS,planting,1,0
+MILHO 2A SAFRA,MS,planting,2,0
+MILHO 2A SAFRA,MS,planting,3,0
+MILHO 2A SAFRA,MT,harvest,5,0
+MILHO 2A SAFRA,MT,harvest,6,0
+MILHO 2A SAFRA,MT,harvest,7,0
+MILHO 2A SAFRA,MT,harvest,8,0
+MILHO 2A SAFRA,MT,planting,1,0
+MILHO 2A SAFRA,MT,planting,2,0
+MILHO 2A SAFRA,MT,planting,3,0
+MILHO 2A SAFRA,PR,harvest,5,0
+MILHO 2A SAFRA,PR,harvest,6,0
+MILHO 2A SAFRA,PR,harvest,7,0
+MILHO 2A SAFRA,PR,harvest,8,0
+MILHO 2A SAFRA,PR,harvest,9,0
+MILHO 2A SAFRA,PR,planting,1,0
+MILHO 2A SAFRA,PR,planting,2,0
+MILHO 2A SAFRA,PR,planting,3,0
+MILHO 2A SAFRA,PR,planting,4,0
+SOJA,BA,harvest,1,0
+SOJA,BA,harvest,2,0
+SOJA,BA,harvest,3,0
+SOJA,BA,harvest,4,0
+SOJA,BA,harvest,5,0
+SOJA,BA,planting,10,-1
+SOJA,BA,planting,11,-1
+SOJA,BA,planting,12,-1
+SOJA,BA,planting,1,0
+SOJA,GO,harvest,1,0
+SOJA,GO,harvest,2,0
+SOJA,GO,harvest,3,0
+SOJA,GO,harvest,4,0
+SOJA,GO,planting,10,-1
+SOJA,GO,planting,11,-1
+SOJA,GO,planting,12,-1
+SOJA,MG,harvest,1,0
+SOJA,MG,harvest,2,0
+SOJA,MG,harvest,3,0
+SOJA,MG,harvest,4,0
+SOJA,MG,planting,10,-1
+SOJA,MG,planting,11,-1
+SOJA,MG,planting,12,-1
+SOJA,MS,harvest,1,0
+SOJA,MS,harvest,2,0
+SOJA,MS,harvest,3,0
+SOJA,MS,harvest,4,0
+SOJA,MS,planting,10,-1
+SOJA,MS,planting,11,-1
+SOJA,MS,planting,12,-1
+SOJA,MT,harvest,1,0
+SOJA,MT,harvest,2,0
+SOJA,MT,harvest,3,0
+SOJA,MT,harvest,4,0
+SOJA,MT,planting,10,-1
+SOJA,MT,planting,11,-1
+SOJA,MT,planting,12,-1
+SOJA,MT,planting,9,-1
+SOJA,PR,harvest,1,0
+SOJA,PR,harvest,2,0
+SOJA,PR,harvest,3,0
+SOJA,PR,harvest,4,0
+SOJA,PR,harvest,5,0
+SOJA,PR,planting,10,-1
+SOJA,PR,planting,11,-1
+SOJA,PR,planting,12,-1
+SOJA,PR,planting,1,0
+SOJA,PR,planting,9,-1
+SOJA,RS,harvest,2,0
+SOJA,RS,harvest,3,0
+SOJA,RS,harvest,4,0
+SOJA,RS,harvest,5,0
+SOJA,RS,planting,10,-1
+SOJA,RS,planting,11,-1
+SOJA,RS,planting,12,-1
+SOJA,RS,planting,1,0
