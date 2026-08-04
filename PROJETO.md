@@ -145,8 +145,8 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
 |---|---|---|
 | 1 | Repo, ingestão CONAB + PAM + POWER, camada raw | parcial — CONAB pronta, PAM e POWER faltando |
 | 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
-| 3 | Marts + testes dbt + análise exploratória (achar o insight) | |
-| 4 | Modelo, backtest temporal, comparação com baseline | |
+| 3 | Marts + testes dbt + análise exploratória (achar o insight) | ✅ |
+| 4 | Modelo, backtest temporal, comparação com baseline | ✅ |
 | 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | |
 | 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
 
@@ -252,14 +252,83 @@ e a pior célula a **180 dias** — a métrica virou um detector de estação se
 região, a mesma classe de erro do fan-out. A versão que ficou conta **só os dias dentro da
 janela**: a BA cai para 11,8, alinhada com PR (10,9) e RS (11,4).
 
-**Ainda não existe:** modelo preditivo, app Streamlit, CI.
+### ✅ Modelo preditivo entregue — e o resultado tem uma manchete diferente da esperada
+Código em `analysis/` (`dataset.py`, `trend.py`, `compare_detrend.py`, `backtest.py`).
+Backtest walk-forward de 2003 a 2025: **tendência, normais climatológicas e modelo são todos
+refeitos a cada safra usando só o passado.** Nada da safra `T` está disponível quando `T` é
+prevista — inclusive as normais, que no mart são fixas em 1992–2020 e ali seriam vazamento.
+
+**Na média, o modelo empata com o baseline.** Skill sobre "safra = tendência": soja **+3,4%**,
+safrinha **+1,2%** no RMSE do resíduo. Acerto direcional 53% e 58% — perto de moeda.
+Se o projeto parasse aqui, a conclusão publicada seria "não bate a tendência".
+
+**Mas a média esconde o resultado.** Separando por severidade da safra:
+
+| Faixa do desvio real | n (soja) | RMSE baseline | RMSE modelo | Ganho |
+|---|---|---|---|---|
+| Quebra < -20% | 14 | 34,4 | 20,6 | **+40%** |
+| -20% a -10% | 15 | 15,7 | 10,8 | **+31%** |
+| Normal ±10% | 89 | 5,9 | 9,6 | -61% |
+| Boa > +20% | 12 | 33,5 | 34,8 | -4% |
+
+**O modelo é útil só nas quebras, e atrapalha em ano normal** — e ano normal é 55% da amostra,
+o que dilui tudo no RMSE global. Na safrinha o padrão se repete mais fraco (+27% nas quebras).
+Detecção de safra 10% ou mais abaixo da tendência: **recall de 45% na soja e 50% na safrinha**,
+com precisão de ~50%. O baseline detecta **zero** por construção — ele nunca prevê quebra.
+
+Essa é a leitura honesta e é a que vai para o README: *não* é um previsor de safra; é um
+detector de quebra com metade de acerto e metade de falso alarme, contra um baseline que
+nunca avisa. Para trading e crédito rural, avisar metade das quebras com antecedência vale
+mais que 3% de RMSE.
+
+**Erro de previsão da produtividade** (comparável à tabela de tendências, mesma métrica):
+soja **22,3% → 16,7%**, safrinha **31,8% → 26,5%**.
+
+### A escolha do detrend: as duas hipóteses da sessão anterior caíram
+`compare_detrend.py` testa 12 formas de tendência por erro out-of-sample. Resultado para a
+safrinha, onde a reta era o problema conhecido:
+
+- **Tendência não-linear não resolve.** `log_linear` é a **pior** de todas (RMSE 39,4 contra
+  31,5 da reta, viés de +15%): em espaço log a expansão inicial extrapola para o absurdo.
+  Quadrática e Theil-Sen também perdem para a reta.
+- **O que ganha é não extrapolar:** média móvel de 3 anos, RMSE 28,3 e viés -3%.
+- **E mesmo assim a reta ficou.** A média móvel é melhor *previsão* e pior *alvo*: ela já
+  absorve o clima recente, então o resíduo contra ela carrega reversão à média em vez de
+  clima, e todo modelo treinado nesse alvo ficou ~50% **pior** que o próprio baseline. Na reta,
+  os mesmos modelos batem o baseline. Ponta a ponta — que é o que importa — reta + modelo
+  (26,5% de erro) bate média móvel sozinha (28,6%).
+
+⚠️ **Viés de seleção declarado:** o par tendência × modelo foi escolhido olhando o backtest.
+Os números acima são otimistas por uma margem desconhecida; o teste honesto é a próxima safra
+não vista. Registrado no código também, não só aqui.
+
+### ⚠️ Armadilha: janela climática incompleta lê como seca
+A previsão da safrinha 2026 saiu com **+99% no PR e +96% no MS** — quase o dobro de qualquer
+produtividade já registrada. Causa: o NASA POWER vai até 28/07/2026 e a janela crítica do PR é
+abr–ago, então só **119 dos 153 dias** estavam na base. Menos dias = menos chuva acumulada e
+menos dias secos, o modelo lê "anomalia extrema" e extrapola. Guard implementado: só prevê com
+**≥95% da janela coberta**; PR e MS ficam suprimidos até agosto entrar na base.
+Isso é o mesmo problema da janela parcial (decisão abaixo), e mostra como ela precisa ser feita:
+as anomalias têm de ser medidas contra a normal **da mesma janela parcial**, nunca da completa.
+
+### Previsão para 2026 (a CONAB ainda não fechou)
+Soja, desvio previsto contra a tendência: **RS -22,9%**, **PR -12,5%**, MS -6,7%, o resto perto
+de zero. O modelo está **mais pessimista que a CONAB** no RS (2.226 contra 2.769 kg/ha
+estimados, -20%) e no PR (-17%). É a aposta verificável do projeto — quando a CONAB fechar,
+dá para conferir sem ajuste posterior.
+Na safrinha as diferenças contra a CONAB são grandes (GO +26%, BA -23%), mas ali o erro é
+principalmente da **tendência**, não do clima: a série é curta e a reta ainda é frouxa.
+
+**Ainda não existe:** app Streamlit, CI.
 
 ### Próximos passos, em ordem
-1. **Modelo preditivo** com validação temporal (ver seção 11) — e resolver o detrend não-linear
-   da safrinha antes de treinar.
-2. **App Streamlit** publicado no Community Cloud.
-3. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias).
-4. README final liderado pelo achado + post no LinkedIn.
+1. **App Streamlit** publicado no Community Cloud.
+2. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias).
+3. README final liderado pelo achado + post no LinkedIn.
+4. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
+   fechada, medindo quanto de precisão se perde por mês de antecedência ganho. Vira o gráfico
+   mais forte do dashboard. Exige um modelo dbt de clima acumulado por mês da janela e normais
+   parciais correspondentes (ver a armadilha acima).
 
 Dívida pequena, quando for mexer no dbt de novo: os modelos não têm `_models.yml` — os 22 testes
 atuais são todos de source e de seed. As colunas do mart não têm teste nenhum.
@@ -370,16 +439,13 @@ nesse vão que trading, crédito rural e seguro agrícola decidem. Exemplo real 
 o clima de abr–ago/2021 no PR (chuva a -2 desvios, 19 dias secos a mais) era fato medido muito
 antes de a CONAB fechar a produtividade que veio 51% abaixo da tendência.
 
-### Decisão em aberto para o Caio
-Rodar o modelo sobre a **janela crítica completa** (mais preciso, quase sem antecedência — para
-soja a janela fecha junto com a colheita) ou sobre a **janela parcial** (ex.: só o clima até
-janeiro para prever o resultado de abril; menos preciso, mas com o valor real de antecipar)?
+### Estado da decisão janela completa × parcial
+**Implementada a completa** (v1, em `analysis/backtest.py`). A parcial continua valendo a pena e
+virou o item 4 dos próximos passos, com um requisito que a armadilha da safra 2026 deixou claro:
+as anomalias precisam ser medidas contra a normal **da mesma janela parcial**. Comparar clima
+parcial contra normal de janela cheia produz anomalia falsa — foi assim que o PR 2026 virou +99%.
 
-Recomendação: fazer os dois e medir **quanto de precisão se perde por mês de antecedência
-ganho**. Vira um gráfico forte no dashboard. Na janela parcial os meses futuros entram como
-clima normal, e a incerteza sobe — precisa estar declarado.
-
-Também dá para estimar a **safra corrente (2025/26)**, que na base ainda é estimativa da CONAB.
+A **safra corrente (2025/26) já é estimada** — ver "Previsão para 2026" no estado atual.
 
 ## 12. Log de sessões
 
@@ -416,3 +482,16 @@ spells cruzam a virada do ano (se o índice estivesse errado, seriam zero).
 `dbt build --target dev`: **29/29 verde**.
 Uma linha (BA safrinha 2011) viola por 1,4e-14 o invariante `worst_cell >= média ponderada` —
 é acúmulo de ponto flutuante quando todas as células têm o mesmo valor, não erro de lógica.
+
+**04/08/2026 — sessão 3 (trabalho)**
+Semana 4 fechada: `analysis/` com detrend, backtest walk-forward e previsão da safra corrente.
+scikit-learn 1.9 instalado (wheel para Python 3.14 existe) e fixado no `requirements.txt`.
+Duas hipóteses da sessão anterior caíram no teste — detrend não-linear para a safrinha (a pior
+de todas) e a média móvel como alvo (melhor previsão, alvo pior). A manchete do modelo mudou de
+"bate a tendência" para "só serve nas quebras": +40% nas safras 20% abaixo da tendência e -61%
+em ano normal. Guard de janela incompleta implementado depois de a safrinha 2026 do PR prever
+o dobro do plausível.
+Três coisas que valem lembrar no próximo modelo: (1) RMSE médio esconde utilidade concentrada
+na cauda — sempre cortar por severidade; (2) escolher a tendência pelo melhor baseline não é o
+mesmo que escolher pelo melhor sistema, e foi o segundo critério que valeu; (3) o alvo do
+modelo e a previsão do nível são objetivos distintos e podem apontar para formas diferentes.
