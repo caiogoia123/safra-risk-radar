@@ -182,10 +182,38 @@ cd dbt
 dias com mínima ≤ 3 °C) → PR → MS → MG → GO → MT (2,0 °C, 2 dias) → BA (10,2 °C, zero).
 Chuva anual por UF entre 1.112 mm (oeste baiano) e 1.655 mm (MT), tudo plausível.
 
-**Ainda não existe:** camadas intermediate e marts, modelo, app, CI.
+**Camada analítica pronta:** `int_crop_windows`, `int_season_weather`, `fct_season_risk`.
+`dbt build --target dev`: **29/29 verde**.
 
-**Próximo passo concreto:** janelas fenológicas por cultura × UF (ver seção 11), depois
-`int_weather_by_window` e as anomalias contra a normal de 1991–2020.
+### 🎯 O SINAL EXISTE (medido em 04/08)
+Correlação entre anomalia climática na janela crítica e resíduo de produtividade (1992–2025):
+
+| Cultura | dias secos | chuva | temperatura |
+|---|---|---|---|
+| Soja | **-0,39** | +0,29 | -0,29 |
+| Milho 2ª safra | -0,26 | +0,21 | -0,18 |
+
+**A exposição climática é muito desigual entre UFs** — o achado mais forte até agora.
+Soja, correlação do resíduo com anomalia de chuva: **RS +0,50**, MS +0,39, MG +0,35, PR +0,24,
+BA +0,22, GO +0,15, **MT +0,13**. O RS é ~4× mais sensível a chuva que o MT. Média nacional
+esconde isso por completo.
+
+**Validação histórica sem ajuda:** as duas piores safras da série são eventos reais —
+RS soja 2005 (**-67%** vs tendência, 17 dias secos a mais: a seca de 2004/05) e
+PR safrinha 2021 (**-51%**, chuva a **-2,06 desvios-padrão**: a quebra da safrinha de 2021).
+
+### ⚠️ Limitação metodológica encontrada: detrend linear não serve para a safrinha
+Produtividade média da safrinha por período: 1.796 → 2.971 → 4.607 → **5.198 kg/ha**. A cultura
+saiu de marginal para dominante; a reta não acompanha, e o resíduo dos anos iniciais carrega
+**erro de tendência, não sinal climático**. Evidência: cortando a série em 2010+, a correlação
+com dias secos sobe de -0,26 para **-0,48**, enquanto a soja fica estável em ~-0,38 nos dois
+recortes (a soja cresce perto de uma reta — 2.212 → 3.501).
+Encaminhamento para a semana 4: tendência não-linear, início mais tarde, ou os dois.
+
+**Ainda não existe:** modelo preditivo, app, CI.
+
+**Próximo passo concreto:** dias secos consecutivos (a métrica de veranico, que exige
+gaps-and-islands por célula) e o modelo com validação temporal.
 
 ### Infra resolvida (não repetir a pesquisa)
 - **BigQuery sandbox**: sem cartão, sem conta de faturamento. 1 TB de consulta e 10 GB de
@@ -241,16 +269,27 @@ como dado faltando.
 
 Ciclo da soja, da mesma publicação: **105 a 135 dias**.
 
-### Ainda a definir: a janela crítica
+### Janela crítica (aprovada pelo Caio em 04/08, implementada)
 O calendário dá plantio e colheita, não a fase de enchimento de grão — que é a sensível à seca.
-Ela precisa ser **derivada**, e a derivação é uma decisão de modelagem, não um dado oficial:
-por isso o seed guarda só o que a CONAB publica, e a janela crítica sai de uma regra explícita
-no dbt, fácil de revisar.
+A janela crítica é **derivada**, e por ser decisão de modelagem e não dado oficial, o seed guarda
+só o que a CONAB publica; a derivação vive numa regra explícita em `int_crop_windows.sql`.
 
-Proposta a validar: a fase crítica ocupa os meses entre o fim do plantio e o início da colheita,
-estendida um mês para trás a partir da colheita (o enchimento antecede a colheita imediatamente).
-Para a soja do MT isso dá dez–mar; para a safrinha do MT, abr–mai, que é justamente a janela do
-veranico. Vale conferir com o Caio, que é do agro.
+**Regra:** do último mês de plantio até um mês antes do fim da colheita. O enchimento antecede
+imediatamente o corte, e o fim da janela de colheita é secagem em campo, quando o clima já não
+define produtividade.
+
+| Cultura | UF | Janela crítica |
+|---|---|---|
+| Soja | MT, GO, MG, MS | dez–mar |
+| Soja | PR, RS, BA | jan–abr |
+| Milho 2ª safra | MT, MG, BA | mar–jul |
+| Milho 2ª safra | PR | abr–ago |
+
+### Índice de mês da safra (truque que simplificou tudo)
+Meses viram um índice sequencial da safra: `Set(-1) = -3 … Dez(-1) = 0, Jan = 1 … Set = 9`.
+A propriedade útil: para a safra de colheita `Y`, o índice `s` é o mês absoluto `Y * 12 + s`
+nos dois ramos. Assim toda a aritmética de data vira soma de inteiros — sem construir datas,
+o que também mantém o SQL portátil (DuckDB tem `make_date()`, BigQuery tem `DATE()`).
 
 ## 11. Log de sessões
 

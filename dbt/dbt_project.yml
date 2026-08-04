@@ -13,6 +13,14 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+vars:
+  # NASA POWER starts in 1991, and a season's window reaches back into the
+  # previous October - so 1992 is the first season with complete weather.
+  first_harvest_year: 1992
+  # WMO standard climate normal period.
+  normal_start_year: 1992
+  normal_end_year: 2020
+
 models:
   safra_risk_radar:
     # Tables everywhere: the dataset is small, and the BigQuery sandbox rejects

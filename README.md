@@ -67,9 +67,56 @@ production from PAM locates the real producing belt, and weather is sampled and 
    baseline (forecast = trend) is reported alongside. If the model does not beat the trend,
    that result gets published too.
 
-## Findings
+## Findings so far
 
-*To be filled in at week 3, with the analysis. No claims before the data supports them.*
+These are correlations from the built marts, not the output of a validated model.
+The forecasting work comes next, and its results will be reported separately.
+
+**Weather in the critical window tracks yield, in the direction agronomy predicts.**
+Against each state's own 1992-2020 normal, over 1992-2025:
+
+| Crop | Dry-day anomaly | Rainfall anomaly | Temperature anomaly |
+|---|---|---|---|
+| Soybean | **-0.39** | +0.29 | -0.29 |
+| Second-crop corn | -0.26 | +0.21 | -0.18 |
+
+**Climate exposure is wildly uneven between states** — the single most useful result
+so far. Correlation of soybean yield residual against weather anomaly:
+
+| State | Rainfall | Dry days |
+|---|---|---|
+| Rio Grande do Sul | **+0.50** | **-0.56** |
+| Mato Grosso do Sul | +0.39 | -0.51 |
+| Minas Gerais | +0.35 | -0.25 |
+| Paraná | +0.24 | -0.31 |
+| Bahia | +0.22 | -0.52 |
+| Goiás | +0.15 | -0.24 |
+| Mato Grosso | +0.13 | -0.40 |
+
+Rio Grande do Sul is roughly four times as rainfall-sensitive as Mato Grosso. A
+national average hides this completely: the same drought that barely dents Mato
+Grosso is what breaks a harvest in the South. Anyone pricing crop risk on a
+country-level number is mispricing both states.
+
+**The two worst seasons in the series are real events the data found unaided:**
+
+- **Rio Grande do Sul soybean, 2005: -67% against trend**, with 17 extra dry days.
+  The 2004/05 drought.
+- **Paraná second-crop corn, 2021: -51%**, with rainfall at **-2.06 standard
+  deviations**. The safrinha failure of 2021.
+
+## Known limitations
+
+- **The linear detrend does not fit second-crop corn.** Its yield went from 1,796 to
+  5,198 kg/ha as the crop moved from marginal to dominant — growth a straight line
+  cannot follow, so early-season residuals carry trend error rather than weather
+  signal. Evidence: restricting the series to 2010+ lifts the dry-day correlation
+  from -0.26 to -0.48, while soybean holds steady at ~-0.38 either way. The
+  forecasting model needs a non-linear trend, a later start date, or both.
+- **Rio Grande do Sul is excluded from the corn analysis** — CONAB publishes no
+  safrinha calendar for the state, because it does not grow a meaningful second crop.
+- Correlation here is in-sample and uses a trend fitted over the whole series. It
+  describes the record; it does not forecast.
 
 ## Reproducing
 
