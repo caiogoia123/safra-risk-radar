@@ -5,8 +5,11 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# Data (regenerate with: python -m ingestion)
-data/
+# Raw and staged data, plus the DuckDB file (regenerate with: python -m ingestion).
+# Anchored to the repo root on purpose: an unanchored `data/` also matches
+# app/data/, which holds the small CSVs the published dashboard reads and which
+# must be committed.
+/data/
 
 # dbt
 dbt/target/

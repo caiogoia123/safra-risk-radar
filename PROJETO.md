@@ -147,7 +147,7 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
 | 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
 | 3 | Marts + testes dbt + análise exploratória (achar o insight) | ✅ |
 | 4 | Modelo, backtest temporal, comparação com baseline | ✅ |
-| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | app pronto, falta publicar |
+| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | CI pronto; app pronto, falta publicar |
 | 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
 
 ## 8. Como rodar
@@ -343,12 +343,39 @@ tema claro fixo em `.streamlit/config.toml` — tema escuro exigiria revalidar o
 "New app" → repo `caiogoia123/safra-risk-radar`, branch `main`, main file `app/streamlit_app.py`.
 O Community Cloud acha o `app/requirements.txt` sozinho.
 
-**Ainda não existe:** CI.
+### ✅ CI no GitHub Actions
+Dois workflows, separados por custo:
+
+- **`.github/workflows/ci.yml`** — todo push e PR, ~1 min, sem warehouse e sem credencial.
+  Job `dbt-parse` resolve o grafo inteiro (pega um `ref` para modelo renomeado sem precisar de
+  dado); job `app` instala o `app/requirements.txt` e roda `app/selftest.py`, que constrói **todas**
+  as figuras do dashboard a partir dos CSVs commitados. Esse selftest existe por um motivo
+  específico: se o export e o código dos gráficos divergirem (uma coluna renomeada), o dashboard
+  publicado quebra para todo mundo e nada mais no repo perceberia.
+- **`.github/workflows/refresh.yml`** — segundas 06:00 UTC + manual. Ingestão completa →
+  `dbt build --target dev` → BigQuery (load + `dbt build --target prod`) → `export_app_data` →
+  commita `app/data` se mudou. Mata dois coelhos: mantém o app atual e **zera o relógio dos 60
+  dias** das tabelas do sandbox.
+
+**Secrets a configurar** (Settings → Secrets and variables → Actions): `GCP_SA_KEY` com o
+**conteúdo** do JSON da service account e `GCP_PROJECT` com `safra-risk-radar`. Sem eles o
+refresh ainda roda — só pula a metade do BigQuery. O `refresh.yml` **não** dispara em
+`pull_request` de propósito: num repo público, isso impede que um PR de terceiro rode código
+com acesso ao secret.
+
+### ⚠️ Armadilha: `data/` no .gitignore também casava com `app/data/`
+Uma linha `data/` sem barra inicial casa com **qualquer** diretório `data` em qualquer nível.
+Os CSVs do dashboard estavam sendo silenciosamente ignorados — o commit `8878ea9` foi feito com
+a mensagem "with exported mart data" e **sem os dados**; publicado assim, o app cairia com
+`FileNotFoundError`. Corrigido para `/data/`, ancorado na raiz. Sintoma a lembrar: `git add`
+não reclama de arquivo ignorado, ele simplesmente não adiciona.
+
+**Ainda não existe:** README final.
 
 ### Próximos passos, em ordem
 1. **Publicar o app** no Community Cloud (5 min, precisa da conta do Caio).
-2. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias) — e que rode
-   `analysis/export_app_data.py`, senão o app congela nos dados de hoje.
+2. **Configurar os dois secrets** no GitHub e disparar o `refresh.yml` uma vez pela aba Actions,
+   para ver o pipeline inteiro rodar em runner limpo.
 3. README final liderado pelo achado + post no LinkedIn.
 4. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
    fechada, medindo quanto de precisão se perde por mês de antecedência ganho. Vira o gráfico
@@ -532,3 +559,14 @@ Verificação no navegador ficou parcial: o painel do preview não estava visív
 screenshot nem clique nos filtros — conferido por inspeção de DOM (geometria dos 4 gráficos,
 zero overflow, rótulos não cortados, sem erro de console) e a lógica dos filtros testada em
 Python direto (inclusive safrinha sem RS).
+
+**04/08/2026 — sessão 5 (trabalho)**
+CI no GitHub Actions: `ci.yml` (rápido, todo push) e `refresh.yml` (semanal, pipeline inteiro +
+BigQuery + commit dos dados do app). Criado o `app/selftest.py`, que o CI usa para construir
+todas as figuras a partir dos CSVs — a regressão que ele pega é o export e os gráficos
+divergirem, que quebraria o dashboard publicado sem nada mais notar.
+**Achado incidental que valia a sessão inteira:** os CSVs do app nunca tinham sido commitados —
+`data/` no .gitignore casa com `app/data/` também. O commit anterior levava o app sem os dados.
+Testado localmente o que dá para testar sem push (YAML válido nos dois workflows, `dbt parse`
+com as env vars falsas do CI, selftest verde); o que só o primeiro run vai provar é o Python
+3.14 no runner, os wheels no Linux, o tempo do NASA POWER e a permissão de push do bot.

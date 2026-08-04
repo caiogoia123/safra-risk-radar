@@ -1,0 +1,49 @@
+name: CI
+
+# Fast checks on every push: no warehouse, no credentials, no network beyond
+# PyPI. The heavy pipeline lives in refresh.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dbt-parse:
+    name: dbt project parses
+    runs-on: ubuntu-latest
+    env:
+      # profiles.yml renders every target, including the BigQuery one, so these
+      # have to resolve even though this job never connects to anything.
+      GCP_KEYFILE: /tmp/absent.json
+      GCP_PROJECT: none
+      DUCKDB_PATH: /tmp/ci.duckdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install dbt
+        run: pip install dbt-core==1.12.0 dbt-duckdb==1.10.1 dbt-bigquery==1.12.0
+      - name: Parse
+        working-directory: dbt
+        # Resolves the whole graph -- every ref, source, seed and macro -- which
+        # is what catches a renamed model without needing any data.
+        run: dbt parse --target dev --profiles-dir .
+
+  app:
+    name: Dashboard renders
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install app dependencies
+        # The published app's own requirements, so CI fails the same way the
+        # deployed app would.
+        run: pip install -r app/requirements.txt
+      - name: Build every figure
+        run: python app/selftest.py
