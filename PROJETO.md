@@ -132,8 +132,9 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
    Recorte por UF, porque o calendário do MT não é o do RS.
 3. **Anomalia climática, não valor absoluto:** desvio contra a normal de 1991–2020 daquele
    ponto e daquele dia do ano. Chuva de 100 mm em maio é normal no RS e catástrofe de seca no MT.
-4. **Features com sentido agronômico:** dias secos consecutivos na janela crítica, graus-dia,
-   noites quentes, déficit hídrico acumulado. Não jogar 200 features num XGBoost.
+4. **Features com sentido agronômico:** dias secos na janela crítica, graus-dia, noites quentes,
+   déficit hídrico acumulado. Não jogar 200 features num XGBoost. *(Dias secos **consecutivos**
+   estavam nesta lista e saíram — medido em 04/08, é redundante; ver a seção do veranico.)*
 5. **Validação temporal honesta:** treina até a safra `t`, testa em `t+1`. Nada de embaralhar.
    Baseline explícito (previsão = tendência) — se o modelo não bater a tendência, o projeto
    **relata isso**, não esconde. Esse é o padrão do `alpha-validation-lab`.
@@ -210,16 +211,58 @@ com dias secos sobe de -0,26 para **-0,48**, enquanto a soja fica estável em ~-
 recortes (a soja cresce perto de uma reta — 2.212 → 3.501).
 Encaminhamento para a semana 4: tendência não-linear, início mais tarde, ou os dois.
 
+### ❌ Resultado negativo: o veranico não é a variável forte que se esperava (04/08)
+Implementado o veranico — maior sequência de dias secos dentro da janela crítica, por
+gaps-and-islands sobre a série diária (`int_season_weather.sql`). **A hipótese era que ele
+fosse a variável mais forte do conjunto. É mais fraca que a contagem simples de dias secos:**
+
+| Métrica (correlação com o resíduo, 1992–2025) | Soja | Safrinha |
+|---|---|---|
+| Dias secos soltos (já existia) | **-0,39** | **-0,26** |
+| Veranico na janela | -0,25 | -0,20 |
+| Dias em veranicos ≥ 10 dias | -0,29 | -0,22 |
+| Veranico da pior célula | -0,22 | -0,16 |
+
+Não é fragilidade da definição: testados limiares de dia seco de 1, 2 e 5 mm (a suspeita era
+que uma garoa de 1,2 mm partisse um veranico em dois) e quatro formas da métrica — **nenhuma
+das 12 combinações bate o baseline.** A melhor delas, dias em veranicos ≥ 10 dias com limiar de
+2 mm, chega a -0,31 na soja.
+
+**O teste que fechou a questão foi a correlação parcial.** Veranico e dias secos correlacionam
+**0,73** entre si na soja; controlando por dias secos, o que sobra do veranico é **+0,05** — some
+e ainda troca de sinal. Na safrinha sobra -0,10. Por UF, só GO (-0,26) e MG (-0,18) mostram algo
+residual; no PR e no RS o sinal inverte, que é o que ruído faz.
+
+**Leitura:** numa janela de ~120 dias, a contagem total de dias secos já é um proxy de déficit
+hídrico acumulado e é mais estável. O veranico descreve **um** evento e joga fora o resto da
+janela, então carrega mais variância amostral pela mesma informação.
+
+**Decisão:** a coluna **fica no mart como descritiva, fora do modelo.** "31 dias sem chuva no
+enchimento de grão, contra 12 normais" é a versão legível do mesmo fato, e o dashboard precisa
+falar assim. De propósito **não tem z-score** — publicar um convidaria a tratá-la como feature
+ao lado das outras. Isso vai para o README: testar uma hipótese agronômica plausível e publicar
+que ela não se sustentou é o padrão do `alpha-validation-lab`.
+
+### ⚠️ Armadilha: medir o veranico inteiro captura a estação seca, não o veranico
+Primeira implementação contava o **spell completo** que tocasse a janela (argumento: se choveu
+zero por 40 dias, o solo está seco quando a cultura entra no enchimento, tendo a seca começado
+antes ou não). Some com a realidade da BA: a janela da soja fecha em abril, exatamente quando
+começa a estação seca de cinco meses. O veranico médio da BA foi a **29 dias** (contra 12 no PR)
+e a pior célula a **180 dias** — a métrica virou um detector de estação seca, e enviesado por
+região, a mesma classe de erro do fan-out. A versão que ficou conta **só os dias dentro da
+janela**: a BA cai para 11,8, alinhada com PR (10,9) e RS (11,4).
+
 **Ainda não existe:** modelo preditivo, app Streamlit, CI.
 
 ### Próximos passos, em ordem
-1. **Dias secos consecutivos** por célula (gaps-and-islands em SQL) — é a métrica que captura
-   veranico de verdade e deve ser a variável mais forte do conjunto.
-2. **Modelo preditivo** com validação temporal (ver seção 11) — e resolver o detrend não-linear
+1. **Modelo preditivo** com validação temporal (ver seção 11) — e resolver o detrend não-linear
    da safrinha antes de treinar.
-3. **App Streamlit** publicado no Community Cloud.
-4. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias).
-5. README final liderado pelo achado + post no LinkedIn.
+2. **App Streamlit** publicado no Community Cloud.
+3. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias).
+4. README final liderado pelo achado + post no LinkedIn.
+
+Dívida pequena, quando for mexer no dbt de novo: os modelos não têm `_models.yml` — os 22 testes
+atuais são todos de source e de seed. As colunas do mart não têm teste nenhum.
 
 ### Git
 Tudo commitado e no GitHub até `73444a1` (04/08/2026). **O Caio faz todos os commits** —
@@ -358,3 +401,18 @@ Chave do BigQuery **rotacionada e validada** no fim da sessão.
 NASA POWER ingerido: 255 células, 3,3 milhões de linhas, 1991 → jul/2026, 21 fill values (-999)
 convertidos para nulo. `dbt build` 17/17 verde com os 3 modelos de staging.
 Armadilha do fan-out polo → célula descoberta durante a validação e documentada na seção 5.
+
+**04/08/2026 — sessão 2 (trabalho)**
+Veranico implementado, medido e **rebaixado de feature a coluna descritiva** — a hipótese não se
+sustentou (seção "Resultado negativo", acima). Saldo da sessão: uma variável a menos para o
+modelo e um achado a mais para o README.
+Duas coisas técnicas ficaram de pé no caminho: `day_index` no `stg_weather_daily`, um contador de
+dias sem buracos (`weather_year * 366 + day_of_year` parece equivalente e não é — deixa um furo
+em cada virada de ano, que partiria justamente o veranico de dez→jan da soja), gerado com a macro
+`dbt.datediff` para não amarrar o SQL a um adapter; e o gaps-and-islands em si, que no
+`compile --target prod` sai como `datetime_diff` do BigQuery — portabilidade confirmada sem gastar
+cota. Validado também que a série diária não tem nenhum dia faltando nas 255 células e que 1.854
+spells cruzam a virada do ano (se o índice estivesse errado, seriam zero).
+`dbt build --target dev`: **29/29 verde**.
+Uma linha (BA safrinha 2011) viola por 1,4e-14 o invariante `worst_cell >= média ponderada` —
+é acúmulo de ponto flutuante quando todas as células têm o mesmo valor, não erro de lógica.

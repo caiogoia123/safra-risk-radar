@@ -21,6 +21,13 @@ typed as (
         extract(month from date)                    as weather_month,
         extract(dayofyear from date)                as day_of_year,
 
+        -- A gapless day counter, needed downstream to find runs of consecutive
+        -- days. `weather_year * 366 + day_of_year` would look equivalent and is
+        -- not: it leaves a hole at every new year, which would split a dry spell
+        -- running Dec into Jan -- precisely the soybean critical window.
+        -- datediff is the dbt cross-database macro, so this stays portable.
+        {{ dbt.datediff("cast('1991-01-01' as date)", "date", "day") }} as day_index,
+
         temp_mean_c,
         temp_max_c,
         temp_min_c,

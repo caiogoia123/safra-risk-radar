@@ -26,7 +26,8 @@ normals as (
         avg(temp_mean_c)            as normal_temp_mean_c,
         stddev(temp_mean_c)         as sd_temp_mean_c,
         avg(dry_days)               as normal_dry_days,
-        stddev(dry_days)            as sd_dry_days
+        stddev(dry_days)            as sd_dry_days,
+        avg(max_dry_spell_days)     as normal_max_dry_spell_days
     from weather
     where harvest_year between {{ var('normal_start_year') }} and {{ var('normal_end_year') }}
     group by crop_name, state_code
@@ -93,6 +94,15 @@ select
     w.dry_days - n.normal_dry_days                              as dry_days_anomaly,
     (w.dry_days - n.normal_dry_days)
         / nullif(n.sd_dry_days, 0)                              as dry_days_anomaly_z,
+
+    -- Longest dry spell, carried for narrative rather than for the model: it is
+    -- redundant with dry_days (r = 0.73 on soybean) and adds nothing once dry
+    -- days are held constant. No z-score on purpose -- publishing one would
+    -- invite treating it as a feature alongside the others.
+    w.max_dry_spell_days,
+    w.max_dry_spell_worst_cell,
+    n.normal_max_dry_spell_days,
+    w.max_dry_spell_days - n.normal_max_dry_spell_days          as dry_spell_anomaly_days,
 
     -- Outcome
     y.yield_kg_ha,
