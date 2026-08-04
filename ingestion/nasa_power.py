@@ -14,6 +14,7 @@ from __future__ import annotations
 import gzip
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 
 import duckdb
@@ -41,8 +42,19 @@ LAG_DAYS = 7
 
 FILL_VALUE = -999.0
 
-TIMEOUT = 300
+# 300 s was too forgiving: a stalled request could burn five minutes before
+# anyone found out. A healthy response is ~3 s locally and ~14 s from a
+# datacenter IP, so 120 s still leaves plenty of room for a slow-but-alive call.
+TIMEOUT = 120
 SLEEP_BETWEEN_CALLS = 0.5
+
+# POWER throttles datacenter IPs hard: the same 255 cells that take ~13 min from
+# a home connection did not finish in 59 min on a GitHub runner. Requests spend
+# that time waiting, not computing, so a handful of concurrent ones recovers most
+# of it. Kept deliberately low -- this is a free public API, and the point is to
+# overlap waiting, not to hammer it.
+MAX_WORKERS = 5
+RETRIES = 2
 
 
 def _cache_path(lat: float, lon: float):
@@ -66,21 +78,32 @@ def fetch_cell(lat: float, lon: float, end_date: str) -> dict:
         with gzip.open(path, "rt", encoding="utf-8") as fh:
             return json.load(fh)
 
-    response = requests.get(
-        ENDPOINT,
-        params={
-            "parameters": PARAMETERS,
-            "community": "AG",
-            "latitude": lat,
-            "longitude": lon,
-            "start": START_DATE,
-            "end": end_date,
-            "format": "JSON",
-        },
-        timeout=TIMEOUT,
-    )
-    response.raise_for_status()
-    payload = response.json()
+    params = {
+        "parameters": PARAMETERS,
+        "community": "AG",
+        "latitude": lat,
+        "longitude": lon,
+        "start": START_DATE,
+        "end": end_date,
+        "format": "JSON",
+    }
+
+    # A timeout or a 5xx here is almost always transient throttling. Without a
+    # retry, one such blip fails the whole scheduled run after the other 254
+    # cells already succeeded.
+    for attempt in range(1, RETRIES + 2):
+        try:
+            response = requests.get(ENDPOINT, params=params, timeout=TIMEOUT)
+            response.raise_for_status()
+            payload = response.json()
+            break
+        except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as error:
+            if attempt > RETRIES:
+                raise
+            backoff = 5 * attempt
+            print(f"[power] {lat},{lon} attempt {attempt} failed ({error}); "
+                  f"retrying in {backoff}s")
+            time.sleep(backoff)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(path, "wt", encoding="utf-8") as fh:
@@ -93,19 +116,36 @@ def fetch_cell(lat: float, lon: float, end_date: str) -> dict:
 def download(force: bool = False) -> None:
     cells = grid_cells()
     end_date = (date.today() - timedelta(days=LAG_DAYS)).strftime("%Y%m%d")
-    print(f"[power] {len(cells)} grid cells | {START_DATE} -> {end_date}")
+    print(f"[power] {len(cells)} grid cells | {START_DATE} -> {end_date}", flush=True)
 
     if force:
         for path in CACHE_DIR.glob("*.json.gz"):
             path.unlink()
 
-    fetched = 0
-    for index, (lat, lon) in enumerate(cells, start=1):
-        was_cached = _cache_path(lat, lon).exists()
-        fetch_cell(lat, lon, end_date)
-        fetched += 0 if was_cached else 1
-        if index % 25 == 0 or index == len(cells):
-            print(f"[power] {index}/{len(cells)} cells ({fetched} downloaded)")
+    pending = [(lat, lon) for lat, lon in cells if not _cache_path(lat, lon).exists()]
+    print(f"[power] {len(cells) - len(pending)} cached, {len(pending)} to download",
+          flush=True)
+    if not pending:
+        return
+
+    # Progress is printed with an elapsed rate on purpose: on a clean runner this
+    # step is the long pole, and a silent hour is indistinguishable from a hang.
+    started = time.monotonic()
+    completed = 0
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(fetch_cell, lat, lon, end_date): (lat, lon)
+            for lat, lon in pending
+        }
+        for future in as_completed(futures):
+            future.result()  # re-raises, so a persistent failure stops the run
+            completed += 1
+            if completed % 10 == 0 or completed == len(pending):
+                elapsed = time.monotonic() - started
+                rate = completed / elapsed * 60
+                remaining = (len(pending) - completed) / rate if rate else 0
+                print(f"[power] {completed}/{len(pending)} downloaded | "
+                      f"{rate:.1f}/min | ~{remaining:.0f} min left", flush=True)
 
 
 def to_parquet() -> None:

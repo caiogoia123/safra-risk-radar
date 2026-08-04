@@ -363,6 +363,27 @@ refresh ainda roda — só pula a metade do BigQuery. O `refresh.yml` **não** d
 `pull_request` de propósito: num repo público, isso impede que um PR de terceiro rode código
 com acesso ao secret.
 
+### ⚠️ O NASA POWER estrangula IP de datacenter (primeiro run do CI morreu por isso)
+O primeiro `refresh.yml` foi **cancelado pelo timeout de 60 min** dentro da ingestão. Não era
+loop nem bug: as mesmas 255 células que levam ~13 min na máquina do Caio (2,6 s por célula,
+1 MB de resposta) não terminaram em 59 min no runner — mais de 14 s cada, ~5× mais lento.
+
+Dois consertos, os dois já aplicados:
+1. **Download concorrente** (`MAX_WORKERS = 5` em `ingestion/nasa_power.py`). O tempo é espera de
+   rede, não processamento, então sobrepor recupera quase tudo: medido localmente, **75 células/min
+   contra ~23 sequencial** (3,3×). Validado com 10 células tiradas do cache e rebaixadas —
+   coordenadas, parâmetros e número de dias idênticos ao original. Timeout por request caiu de
+   300 s para 120 s, e entrou retry com backoff (2 tentativas) para não perder o run inteiro por
+   um 5xx isolado.
+2. **`python -u` no workflow.** O log ficou uma hora em branco porque o Python bufferiza stdout
+   fora de terminal — os prints de progresso ficaram presos no buffer. Um passo silencioso é
+   indistinguível de um travado, e foi o que fez parecer loop infinito.
+
+**O desperdício estrutural continua de pé:** cada run rebaixa 35 anos (70 MB) para obter 7 dias
+novos. A correção definitiva é cache incremental por época — histórico até dez/2025 imutável no
+`actions/cache` e só o ano corrente por request — que levaria o refresh a ~2-3 min. Decidido em
+04/08 **não** fazer agora: o paralelismo já traz para dentro do orçamento de tempo.
+
 ### ⚠️ Armadilha: `data/` no .gitignore também casava com `app/data/`
 Uma linha `data/` sem barra inicial casa com **qualquer** diretório `data` em qualquer nível.
 Os CSVs do dashboard estavam sendo silenciosamente ignorados — o commit `8878ea9` foi feito com
@@ -570,3 +591,10 @@ divergirem, que quebraria o dashboard publicado sem nada mais notar.
 Testado localmente o que dá para testar sem push (YAML válido nos dois workflows, `dbt parse`
 com as env vars falsas do CI, selftest verde); o que só o primeiro run vai provar é o Python
 3.14 no runner, os wheels no Linux, o tempo do NASA POWER e a permissão de push do bot.
+
+**Primeiro run do `refresh.yml`, no mesmo dia:** Python 3.14.6 e os wheels no Linux passaram
+(install em 1m02s), mas a ingestão estourou os 60 min e foi cancelada — ver a seção do throttling
+do POWER acima. Corrigido com download concorrente e `-u`; falta rodar de novo para confirmar.
+Duas lições que valem além deste projeto: **estimativa de tempo medida na máquina local não vale
+para runner de CI** (IP de datacenter é tratado diferente por APIs públicas), e **todo passo longo
+precisa imprimir progresso sem buffer**, senão não há como distinguir lento de travado.
