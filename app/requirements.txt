@@ -1,0 +1,6 @@
+# Streamlit Community Cloud installs from this file, not the repo root one: the
+# published app reads the CSVs in app/data and never touches the warehouse, so
+# duckdb, dbt and scikit-learn are deliberately absent.
+streamlit==1.60.0
+pandas==3.0.5
+plotly==6.9.0

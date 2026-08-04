@@ -147,7 +147,7 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
 | 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
 | 3 | Marts + testes dbt + análise exploratória (achar o insight) | ✅ |
 | 4 | Modelo, backtest temporal, comparação com baseline | ✅ |
-| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | |
+| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | app pronto, falta publicar |
 | 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
 
 ## 8. Como rodar
@@ -319,11 +319,36 @@ dá para conferir sem ajuste posterior.
 Na safrinha as diferenças contra a CONAB são grandes (GO +26%, BA -23%), mas ali o erro é
 principalmente da **tendência**, não do clima: a série é curta e a reta ainda é frouxa.
 
-**Ainda não existe:** app Streamlit, CI.
+### ✅ App Streamlit pronto (falta publicar)
+`app/streamlit_app.py` (layout e texto) + `app/charts.py` (figuras e transformações, sem
+Streamlit — dá para renderizar e **olhar** os gráficos fora do app, que foi como os problemas
+de leitura apareceram). Roda local com:
+
+```powershell
+.venv\Scripts\python -m streamlit run app\streamlit_app.py
+```
+
+**Decisão: o app não fala com o warehouse.** `analysis/export_app_data.py` congela três CSVs em
+`app/data` (244 KB no total) e o app lê deles. Motivo: o Community Cloud serve do repo do
+GitHub e `data/` é gitignorado (171 MB). Assim o app publicado não tem credencial, não gasta
+cota do sandbox e não quebra quando as tabelas do BigQuery expiram. `app/requirements.txt` é
+propositalmente magro (streamlit + pandas + plotly) — sem duckdb, dbt ou scikit-learn.
+**Rodar o export de novo sempre que o `dbt build` mudar os marts.**
+
+O app lidera pelo resultado honesto ("weather predicts the bad harvests"), tem tabela para cada
+gráfico e uma seção final de limitações que inclui o viés de seleção. Cores da paleta validada,
+tema claro fixo em `.streamlit/config.toml` — tema escuro exigiria revalidar os passos.
+
+**Para publicar** (o Caio faz, precisa da conta dele): commitar e push, ir a share.streamlit.io,
+"New app" → repo `caiogoia123/safra-risk-radar`, branch `main`, main file `app/streamlit_app.py`.
+O Community Cloud acha o `app/requirements.txt` sozinho.
+
+**Ainda não existe:** CI.
 
 ### Próximos passos, em ordem
-1. **App Streamlit** publicado no Community Cloud.
-2. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias).
+1. **Publicar o app** no Community Cloud (5 min, precisa da conta do Caio).
+2. **GitHub Actions** agendado (mantém as tabelas do BigQuery dentro dos 60 dias) — e que rode
+   `analysis/export_app_data.py`, senão o app congela nos dados de hoje.
 3. README final liderado pelo achado + post no LinkedIn.
 4. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
    fechada, medindo quanto de precisão se perde por mês de antecedência ganho. Vira o gráfico
@@ -495,3 +520,15 @@ Três coisas que valem lembrar no próximo modelo: (1) RMSE médio esconde utili
 na cauda — sempre cortar por severidade; (2) escolher a tendência pelo melhor baseline não é o
 mesmo que escolher pelo melhor sistema, e foi o segundo critério que valeu; (3) o alvo do
 modelo e a previsão do nível são objetivos distintos e podem apontar para formas diferentes.
+
+**04/08/2026 — sessão 4 (trabalho)**
+App Streamlit construído e rodando local (`app/`), com export dos marts para CSV — o app
+publicado não toca o warehouse. Gráficos extraídos para `app/charts.py` justamente para poder
+renderizá-los como PNG e **olhar**: foi assim que apareceu um erro de leitura que nenhum teste
+pegaria — as barras estavam coloridas por ganho/perda (azul/vermelho) *e* a legenda dizia
+"Soybean = azul", então o hue carregava identidade e polaridade ao mesmo tempo. Trocado para
+cor por cultura; o sinal já está no lado do zero em que a barra fica.
+Verificação no navegador ficou parcial: o painel do preview não estava visível, então não houve
+screenshot nem clique nos filtros — conferido por inspeção de DOM (geometria dos 4 gráficos,
+zero overflow, rótulos não cortados, sem erro de console) e a lógica dos filtros testada em
+Python direto (inclusive safrinha sem RS).
