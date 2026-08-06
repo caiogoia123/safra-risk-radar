@@ -10,9 +10,8 @@ belongs in dbt, so the raw grain of the source stays auditable.
 from __future__ import annotations
 
 import duckdb
-import requests
 
-from . import RAW_DIR, STAGING_DIR
+from . import RAW_DIR, STAGING_DIR, http
 
 SOURCE_URL = "https://portaldeinformacoes.conab.gov.br/downloads/arquivos/SerieHistoricaGraos.txt"
 RAW_FILE = RAW_DIR / "conab" / "serie_historica_graos.txt"
@@ -28,9 +27,8 @@ def download(force: bool = False) -> None:
         return
 
     RAW_FILE.parent.mkdir(parents=True, exist_ok=True)
-    print(f"[conab] downloading {SOURCE_URL}")
-    response = requests.get(SOURCE_URL, timeout=TIMEOUT)
-    response.raise_for_status()
+    print(f"[conab] downloading {SOURCE_URL}", flush=True)
+    response = http.fetch(SOURCE_URL, timeout=TIMEOUT, label="conab series")
     RAW_FILE.write_bytes(response.content)
     print(f"[conab] saved {len(response.content):,} bytes")
 

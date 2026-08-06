@@ -10,11 +10,11 @@ including zero-production ones. Selecting the producing hubs is a later step.
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import duckdb
-import requests
 
-from . import RAW_DIR, STAGING_DIR
+from . import RAW_DIR, STAGING_DIR, http
 
 # IBGE state codes for the states covered by the v1 scope.
 TARGET_STATES = {
@@ -41,6 +41,7 @@ PARQUET_FILE = STAGING_DIR / "ibge_pam_municipal.parquet"
 TIMEOUT = 180
 # SIDRA has no published rate limit; this keeps the loop polite.
 SLEEP_BETWEEN_CALLS = 0.5
+MAX_WORKERS = 5
 
 
 def _fetch(state_code: int, crop_id: int) -> list[dict]:
@@ -51,9 +52,9 @@ def _fetch(state_code: int, crop_id: int) -> list[dict]:
         f"/p/{YEARS}"
         f"/c81/{crop_id}"
     )
-    response = requests.get(url, timeout=TIMEOUT)
-    response.raise_for_status()
+    response = http.fetch(url, timeout=TIMEOUT, label=f"sidra {state_code}/{crop_id}")
     payload = response.json()
+    time.sleep(SLEEP_BETWEEN_CALLS)
     # First element is a header row describing the columns, not data.
     return payload[1:]
 
@@ -68,9 +69,23 @@ def download(force: bool = False) -> None:
     RAW_FILE.parent.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
 
-    for state_code, state_uf in TARGET_STATES.items():
-        for crop_id, crop_name in CROPS.items():
-            fetched = _fetch(state_code, crop_id)
+    # Fourteen requests (7 states x 2 crops), concurrent for the same reason as
+    # the other sources: each took ~20 s from the CI runner, and one at a time
+    # that was five minutes of pure waiting.
+    requested = [
+        (state_code, state_uf, crop_id, crop_name)
+        for state_code, state_uf in TARGET_STATES.items()
+        for crop_id, crop_name in CROPS.items()
+    ]
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(_fetch, state_code, crop_id): (state_uf, crop_name)
+            for state_code, state_uf, crop_id, crop_name in requested
+        }
+        for future in as_completed(futures):
+            state_uf, crop_name = futures[future]
+            fetched = future.result()
             for row in fetched:
                 rows.append(
                     {
@@ -83,8 +98,11 @@ def download(force: bool = False) -> None:
                         "production_t": row["V"] if row["V"] not in ("...", "-", "X") else None,
                     }
                 )
-            print(f"[pam] {state_uf} {crop_name}: {len(fetched):,} rows")
-            time.sleep(SLEEP_BETWEEN_CALLS)
+            print(f"[pam] {state_uf} {crop_name}: {len(fetched):,} rows", flush=True)
+
+    # Concurrency makes completion order arbitrary; sorting keeps the raw file
+    # byte-identical between runs, so a re-run shows no spurious diff.
+    rows.sort(key=lambda r: (r["state_code"], r["crop_name"], r["municipality_id"], r["year"]))
 
     RAW_FILE.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
     print(f"[pam] saved {len(rows):,} rows")

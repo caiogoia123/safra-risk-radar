@@ -385,6 +385,50 @@ Três consertos, todos aplicados:
    centroides testados voltaram idênticos ao cache original. Lição: ao achar um gargalo desse
    tipo, procurar os irmãos dele no mesmo módulo antes de dar por encerrado.
 
+### Auditoria da ingestão (04/08, antes do 3º run) — 3 achados a mais
+Varredura pedida pelo Caio atrás de outros pontos frágeis, com tudo medido em vez de estimado:
+
+4. **`ibge_pam.py`: 14 requisições sequenciais** (7 UFs × 2 culturas), ~20 s cada no runner, ~5 min
+   de espera pura. Paralelizado: **27 s local**, com as 26.320 linhas byte a byte idênticas.
+5. **🔴 O mais importante: o SIDRA caiu no meio de uma resposta durante a própria medição** —
+   `ChunkedEncodingError: IncompleteRead(621971 bytes read, 711168 more expected)`. Nem
+   `ibge_pam` nem `geo` tinham retry: uma falha dessas aos 25 min de execução jogava fora tudo o
+   que já havia sido baixado. Criado o **`ingestion/http.py`**, um único helper com retry e
+   backoff, agora usado pelas quatro fontes. Retry só no que é transitório (timeout, conexão
+   caída, resposta truncada, 5xx, 429); **4xx propaga na hora**, de propósito — foi um 400 do
+   IBGE que revelou o bug do `qualidade=1` na sessão 1, e repetir teria escondido a causa.
+   Os quatro caminhos foram testados (200 real, retry com sucesso na 3ª, falha persistente
+   propagada, 400 sem retry).
+6. **O export não era reprodutível.** Soma de float não é associativa: com as fontes buscadas em
+   paralelo, os mesmos dados somados em ordem diferente mudavam a 12ª casa decimal, e isso sozinho
+   reescrevia **758 linhas de CSV** num run em que nada mudou — o job semanal ficaria commitando
+   ruído puro e enterrando os diffs de verdade. `analysis/export_app_data.py` passou a arredondar
+   os floats em 6 casas; dois exports seguidos agora são byte-idênticos.
+
+**Medido e OK, não precisa de ajuste:** `to_parquet` do POWER (20 s, pico de 212 MB — folgado no
+runner), `export_app_data` (69 s), `dbt build` completo (11 s, 29/29 verde), `conab.py` (uma única
+requisição, agora com retry). `scripts/extract_conab_calendar.py` não entra no CI (só roda quando
+a CONAB publica edição nova do calendário).
+
+**Pipeline inteiro revalidado depois da refatoração:** ingestão completa → `dbt build` 29/29 verde
+→ export → selftest verde, com as mesmas 455 linhas do fato, 3.313.215 de clima e as mesmas
+previsões (soja RS -22,885%).
+
+### 3º run: o paralelismo funcionou, e a falha foi de versão
+Ingestão caiu de **>59 min para 11m38s** — problema de tempo resolvido. O run mesmo assim falhou,
+com `ConnectTimeout` no SIDRA, e o traceback mostrava `requests.get` direto em `_fetch`: **o CI
+estava rodando o commit anterior**, sem o `http.py`. As correções da auditoria existiam só na
+máquina local. Lição operacional trivial e cara: *push antes de disparar*, e conferir a versão
+pelo traceback antes de investigar a lógica.
+
+**A falha valeu por um achado, ainda assim.** O timeout de 180 s de cada fonte é dimensionado para
+uma *resposta* lenta, mas o `requests` aplica o mesmo número à conexão TCP — o run gastou 139 s
+num handshake que nunca ia completar. `http.fetch` passou a separar os dois orçamentos
+(`CONNECT_TIMEOUT = 10`): host inalcançável agora falha em 20 s com duas tentativas, contra 360 s
+antes, e é isso que dá espaço para o retry acontecer de fato. Retries subiram para 3 (espera
+acumulada de 30 s), porque desistir custa dez minutos de run e esperar custa segundos.
+O SIDRA respondeu normalmente no run anterior — é instabilidade da API, não bloqueio de IP.
+
 **O desperdício estrutural continua de pé:** cada run rebaixa 35 anos (70 MB) para obter 7 dias
 novos. A correção definitiva é cache incremental por época — histórico até dez/2025 imutável no
 `actions/cache` e só o ano corrente por request — que levaria o refresh a ~2-3 min. Decidido em

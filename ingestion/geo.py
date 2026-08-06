@@ -21,9 +21,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import duckdb
 import pandas as pd
-import requests
 
-from . import RAW_DIR, STAGING_DIR
+from . import RAW_DIR, STAGING_DIR, http
 
 PAM_PARQUET = STAGING_DIR / "ibge_pam_municipal.parquet"
 CENTROID_CACHE = RAW_DIR / "ibge" / "centroids.json"
@@ -123,10 +122,10 @@ def fetch_centroid(municipality_id: int) -> tuple[float, float]:
         f"https://servicodados.ibge.gov.br/api/v3/malhas/municipios/{municipality_id}"
         "?formato=application/vnd.geo+json"
     )
-    response = requests.get(url, timeout=TIMEOUT)
     # A bad parameter returns a 400 with a JSON body that has no 'features',
-    # which is exactly how this broke the first time around.
-    response.raise_for_status()
+    # which is exactly how this broke the first time around -- so http.fetch
+    # raises 4xx immediately instead of retrying it into a slower failure.
+    response = http.fetch(url, timeout=TIMEOUT, label=f"malha {municipality_id}")
     payload = response.json()
     if "features" not in payload:
         raise ValueError(f"unexpected payload for {municipality_id}: {list(payload)}")

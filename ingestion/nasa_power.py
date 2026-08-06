@@ -19,9 +19,8 @@ from datetime import date, timedelta
 
 import duckdb
 import pandas as pd
-import requests
 
-from . import RAW_DIR, STAGING_DIR
+from . import RAW_DIR, STAGING_DIR, http
 
 HUBS_PARQUET = STAGING_DIR / "producer_hubs.parquet"
 CACHE_DIR = RAW_DIR / "nasa_power"
@@ -54,7 +53,6 @@ SLEEP_BETWEEN_CALLS = 0.5
 # of it. Kept deliberately low -- this is a free public API, and the point is to
 # overlap waiting, not to hammer it.
 MAX_WORKERS = 5
-RETRIES = 2
 
 
 def _cache_path(lat: float, lon: float):
@@ -88,22 +86,12 @@ def fetch_cell(lat: float, lon: float, end_date: str) -> dict:
         "format": "JSON",
     }
 
-    # A timeout or a 5xx here is almost always transient throttling. Without a
-    # retry, one such blip fails the whole scheduled run after the other 254
-    # cells already succeeded.
-    for attempt in range(1, RETRIES + 2):
-        try:
-            response = requests.get(ENDPOINT, params=params, timeout=TIMEOUT)
-            response.raise_for_status()
-            payload = response.json()
-            break
-        except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as error:
-            if attempt > RETRIES:
-                raise
-            backoff = 5 * attempt
-            print(f"[power] {lat},{lon} attempt {attempt} failed ({error}); "
-                  f"retrying in {backoff}s")
-            time.sleep(backoff)
+    # Retry lives in http.fetch: a timeout or a 5xx here is almost always
+    # transient throttling, and without a retry one blip fails the whole
+    # scheduled run after the other 254 cells already succeeded.
+    response = http.fetch(ENDPOINT, params=params, timeout=TIMEOUT,
+                          label=f"power {lat},{lon}")
+    payload = response.json()
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(path, "wt", encoding="utf-8") as fh:

@@ -27,6 +27,23 @@ def export_season_risk() -> pd.DataFrame:
         return con.sql("select * from main_marts.fct_season_risk").df()
 
 
+# Enough precision for a dashboard by a wide margin, and it makes the export
+# reproducible. Floating-point addition is not associative, so once the sources
+# are fetched concurrently the same data can be summed in a different order and
+# land a few units off in the 12th decimal. Unrounded, that noise alone rewrote
+# 758 lines of CSV on a run where nothing had actually changed -- which would
+# have the scheduled job committing pure churn every week and burying the diffs
+# that matter.
+DECIMALS = 6
+
+
+def _stabilise(frame: pd.DataFrame) -> pd.DataFrame:
+    floats = frame.select_dtypes("float")
+    if not floats.empty:
+        frame[floats.columns] = floats.round(DECIMALS)
+    return frame
+
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -51,7 +68,7 @@ def main() -> None:
         ("forecast", forecast),
     ]:
         path = OUTPUT_DIR / f"{name}.csv"
-        frame.to_csv(path, index=False)
+        _stabilise(frame).to_csv(path, index=False)
         print(f"{path.relative_to(REPO_ROOT)}: {len(frame)} linhas, {path.stat().st_size/1024:.0f} KB")
 
 
