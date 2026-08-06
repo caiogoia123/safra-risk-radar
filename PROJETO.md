@@ -368,16 +368,22 @@ O primeiro `refresh.yml` foi **cancelado pelo timeout de 60 min** dentro da inge
 loop nem bug: as mesmas 255 células que levam ~13 min na máquina do Caio (2,6 s por célula,
 1 MB de resposta) não terminaram em 59 min no runner — mais de 14 s cada, ~5× mais lento.
 
-Dois consertos, os dois já aplicados:
-1. **Download concorrente** (`MAX_WORKERS = 5` em `ingestion/nasa_power.py`). O tempo é espera de
-   rede, não processamento, então sobrepor recupera quase tudo: medido localmente, **75 células/min
-   contra ~23 sequencial** (3,3×). Validado com 10 células tiradas do cache e rebaixadas —
-   coordenadas, parâmetros e número de dias idênticos ao original. Timeout por request caiu de
-   300 s para 120 s, e entrou retry com backoff (2 tentativas) para não perder o run inteiro por
-   um 5xx isolado.
+Três consertos, todos aplicados:
+1. **Download concorrente do POWER** (`MAX_WORKERS = 5` em `ingestion/nasa_power.py`). O tempo é
+   espera de rede, não processamento, então sobrepor recupera quase tudo: medido localmente,
+   **75 células/min contra ~23 sequencial** (3,3×). Validado com 10 células tiradas do cache e
+   rebaixadas — coordenadas, parâmetros e número de dias idênticos ao original. Timeout por
+   request caiu de 300 s para 120 s, e entrou retry com backoff (2 tentativas) para não perder o
+   run inteiro por um 5xx isolado.
 2. **`python -u` no workflow.** O log ficou uma hora em branco porque o Python bufferiza stdout
    fora de terminal — os prints de progresso ficaram presos no buffer. Um passo silencioso é
    indistinguível de um travado, e foi o que fez parecer loop infinito.
+3. **`ingestion/geo.py` tinha o mesmo defeito, e passou despercebido no primeiro conserto.** São
+   **510 requisições sequenciais** ao IBGE, com um único print no fim. A API é rápida (0,40 s
+   medidos), mas 510 × (0,40 + 0,3 de sleep) já dá 7,6 min local e muito mais no runner.
+   Paralelizado igual, com progresso a cada 50: **204/min contra ~86 sequencial**, e os 20
+   centroides testados voltaram idênticos ao cache original. Lição: ao achar um gargalo desse
+   tipo, procurar os irmãos dele no mesmo módulo antes de dar por encerrado.
 
 **O desperdício estrutural continua de pé:** cada run rebaixa 35 anos (70 MB) para obter 7 dias
 novos. A correção definitiva é cache incremental por época — histórico até dez/2025 imutável no

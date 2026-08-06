@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import duckdb
 import pandas as pd
@@ -44,6 +45,11 @@ GRID_LON = 0.625
 
 TIMEOUT = 90
 SLEEP_BETWEEN_CALLS = 0.3
+
+# Same reasoning as ingestion/nasa_power.py: the requests are fast (~0.4 s here)
+# but there are 510 of them, and a CI runner is throttled enough that doing them
+# one at a time dominated the whole workflow.
+MAX_WORKERS = 5
 
 
 def rank_hubs() -> list[dict]:
@@ -107,12 +113,12 @@ def _load_cache() -> dict[str, list[float]]:
     return {}
 
 
-def fetch_centroid(municipality_id: int, cache: dict) -> tuple[float, float]:
-    """Bounding-box centre of the municipality outline, in (lat, lon)."""
-    key = str(municipality_id)
-    if key in cache:
-        return tuple(cache[key])
+def fetch_centroid(municipality_id: int) -> tuple[float, float]:
+    """Bounding-box centre of the municipality outline, in (lat, lon).
 
+    Pure fetch: the caller owns the cache. That keeps the dict writes on one
+    thread while the 510 requests overlap.
+    """
     url = (
         f"https://servicodados.ibge.gov.br/api/v3/malhas/municipios/{municipality_id}"
         "?formato=application/vnd.geo+json"
@@ -138,24 +144,47 @@ def fetch_centroid(municipality_id: int, cache: dict) -> tuple[float, float]:
 
     lons = [p[0] for p in points]
     lats = [p[1] for p in points]
-    centroid = [
+    centroid = (
         round((min(lats) + max(lats)) / 2, 4),
         round((min(lons) + max(lons)) / 2, 4),
-    ]
-    cache[key] = centroid
+    )
     time.sleep(SLEEP_BETWEEN_CALLS)
-    return tuple(centroid)
+    return centroid
 
 
 def run(force: bool = False) -> None:
     hubs = rank_hubs()
-    print(f"[geo] {len(hubs)} producing hubs selected")
+    print(f"[geo] {len(hubs)} producing hubs selected", flush=True)
 
     cache = {} if force else _load_cache()
     cached_at_start = len(cache)
 
+    # Concurrent for the same reason as the POWER download: on a clean CI runner
+    # this is 510 requests that used to run one at a time, silently, and the
+    # step is only as fast as the sum of its waiting.
+    missing = [
+        int(hub["municipality_id"])
+        for hub in hubs
+        if str(hub["municipality_id"]) not in cache
+    ]
+    if missing:
+        print(f"[geo] {len(hubs) - len(missing)} cached, {len(missing)} to fetch",
+              flush=True)
+        started = time.monotonic()
+        completed = 0
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            futures = {pool.submit(fetch_centroid, mid): mid for mid in missing}
+            for future in as_completed(futures):
+                # Only this thread touches the cache.
+                cache[str(futures[future])] = list(future.result())
+                completed += 1
+                if completed % 50 == 0 or completed == len(missing):
+                    rate = completed / (time.monotonic() - started) * 60
+                    print(f"[geo] {completed}/{len(missing)} fetched | {rate:.0f}/min",
+                          flush=True)
+
     for hub in hubs:
-        lat, lon = fetch_centroid(int(hub["municipality_id"]), cache)
+        lat, lon = cache[str(hub["municipality_id"])]
         hub["latitude"] = lat
         hub["longitude"] = lon
         # Snap to the POWER grid so neighbouring hubs share one weather request.
