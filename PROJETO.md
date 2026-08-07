@@ -147,7 +147,7 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
 | 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
 | 3 | Marts + testes dbt + análise exploratória (achar o insight) | ✅ |
 | 4 | Modelo, backtest temporal, comparação com baseline | ✅ |
-| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | ✅ CI verde (3m34s); app pronto, falta publicar |
+| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | ✅ CI verde (3m34s); **app no ar em 07/08** |
 | 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
 
 ## 8. Como rodar
@@ -168,7 +168,7 @@ cd dbt
 ..\.venv\Scripts\dbt build --target prod
 ```
 
-## 9. Estado atual (04/08/2026)
+## 9. Estado atual (07/08/2026)
 
 **Funcionando de ponta a ponta:**
 - `.venv` com dbt-core 1.12.0 + dbt-duckdb 1.10.1 + dbt-bigquery 1.12.0 no Python 3.14.5
@@ -319,7 +319,17 @@ dá para conferir sem ajuste posterior.
 Na safrinha as diferenças contra a CONAB são grandes (GO +26%, BA -23%), mas ali o erro é
 principalmente da **tendência**, não do clima: a série é curta e a reta ainda é frouxa.
 
-### ✅ App Streamlit pronto (falta publicar)
+### ✅✅ App Streamlit PUBLICADO — https://safra-risk-radar.streamlit.app
+No ar desde 07/08/2026. Verificado em produção no mesmo dia: os 4 gráficos, as 4 métricas e os
+2 filtros renderizam, sem overflow horizontal e sem erro de console, e o aviso de janela truncada
+já saiu com a data vinda do dado ("the weather series ends 31 July 2026").
+
+⚠️ **Para inspecionar a página por ferramenta, use `/~/+/`.** A URL raiz devolve só a casca do
+Community Cloud (avatar do criador, status) e o app vive num iframe — ler o DOM da raiz dá página
+vazia e parece app quebrado. `https://safra-risk-radar.streamlit.app/~/+/_stcore/health` responde
+`ok` e é a checagem rápida de que o servidor está de pé.
+
+
 `app/streamlit_app.py` (layout e texto) + `app/charts.py` (figuras e transformações, sem
 Streamlit — dá para renderizar e **olhar** os gráficos fora do app, que foi como os problemas
 de leitura apareceram). Roda local com:
@@ -346,9 +356,11 @@ automático já a deixou errada: a série andou para 31/07 e a frase não. O exp
 lá; o `selftest` falha se o arquivo sumir ou vier sem data parseável, porque essa data é impressa
 em prosa e um `KeyError` derrubaria a página inteira, não só a frase.
 
-**Para publicar** (o Caio faz, precisa da conta dele): commitar e push, ir a share.streamlit.io,
-"New app" → repo `caiogoia123/safra-risk-radar`, branch `main`, main file `app/streamlit_app.py`.
-O Community Cloud acha o `app/requirements.txt` sozinho.
+**Como foi publicado:** share.streamlit.io → New app → repo `caiogoia123/safra-risk-radar`, branch
+`main`, main file `app/streamlit_app.py`, Python 3.13 no Advanced settings. Sem secrets — o app não
+toca o warehouse. O Community Cloud acha o `app/requirements.txt` sozinho (procura primeiro no
+diretório do entrypoint, depois na raiz), então o `requirements.txt` pesado da raiz fica de fora.
+**Todo push no `main` dispara redeploy automático.**
 
 ### ✅ CI no GitHub Actions
 Dois workflows, separados por custo:
@@ -564,11 +576,13 @@ não reclama de arquivo ignorado, ele simplesmente não adiciona.
 **Ainda não existe:** README final.
 
 ### Próximos passos, em ordem
-1. **Publicar o app** no Community Cloud (5 min, precisa da conta do Caio).
-2. **Configurar `GCP_SA_KEY` e `GCP_PROJECT`** nos secrets — sem eles o refresh roda, mas pula a
-   metade do BigQuery, e as tabelas do sandbox expiram em 60 dias.
-3. README final liderado pelo achado + post no LinkedIn.
-4. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
+1. **Configurar `GCP_SA_KEY` e `GCP_PROJECT`** nos secrets. Confirmado em 07/08 pela API do GitHub
+   que o refresh **continua pulando os três passos do BigQuery** (`skipped`): o último `dbt build
+   --target prod` foi em 04/08, então **as tabelas do sandbox expiram por volta de 03/10/2026**.
+   É a única pendência com prazo.
+2. README final liderado pelo achado + post no LinkedIn. **Incluir a URL do app** — hoje o README
+   cita "Streamlit app" no diagrama mas não tem link nenhum para o dashboard no ar.
+3. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
    fechada, medindo quanto de precisão se perde por mês de antecedência ganho. Vira o gráfico
    mais forte do dashboard. Exige um modelo dbt de clima acumulado por mês da janela e normais
    parciais correspondentes (ver a armadilha acima).
@@ -577,7 +591,7 @@ Dívida pequena, quando for mexer no dbt de novo: os modelos não têm `_models.
 atuais são todos de source e de seed. As colunas do mart não têm teste nenhum.
 
 ### Git
-Tudo commitado e no GitHub até `73444a1` (04/08/2026). **O Caio faz todos os commits** —
+Tudo commitado e no GitHub até `129f849` (07/08/2026), CI verde. **O Caio faz todos os commits** —
 entregar os comandos prontos, nunca executar ([[preferencias]] na memória nativa).
 
 ### Infra resolvida (não repetir a pesquisa)
@@ -779,6 +793,9 @@ cache do POWER aceito sem conferir cobertura, que virou tarefa própria e foi co
 dia — as duas seções acima.
 Screenshot falhou de novo pelo painel do preview não estar visível; a conferência foi por DOM,
 com a frase corrigida lida na página renderizada.
+
+**App publicado no fim da sessão** — semana 5 fechada de verdade. Verificado no ar: gráficos,
+métricas, filtros e a data derivada do dado, sem erro de console. CI verde nos três pushes do dia.
 
 Revisão do conserto do cache, feito em sessão paralela: aprovado com dois ajustes. O aviso do
 `--allow-stale` dizia que o warehouse terminaria na data da célula mais atrasada, quando a tabela
