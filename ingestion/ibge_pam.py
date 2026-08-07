@@ -9,8 +9,10 @@ including zero-production ones. Selecting the producing hubs is a later step.
 
 from __future__ import annotations
 
+import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 import duckdb
 
@@ -37,6 +39,10 @@ VARIABLE_PRODUCTION = 214  # quantity produced, tonnes
 
 RAW_FILE = RAW_DIR / "ibge" / "pam_municipal.json"
 PARQUET_FILE = STAGING_DIR / "ibge_pam_municipal.parquet"
+
+# Committed extract, beside the code rather than under the gitignored data/.
+# See run() for why.
+REFERENCE_PARQUET = Path(__file__).parent / "reference" / "pam_municipal.parquet"
 
 TIMEOUT = 180
 # SIDRA has no published rate limit; this keeps the loop polite.
@@ -132,8 +138,39 @@ def to_parquet() -> None:
 
 
 def run(force: bool = False) -> None:
+    """Use the committed extract unless explicitly refreshing.
+
+    Same reasoning as the municipal centroids in geo.py, and the same trigger:
+    IBGE refuses connections from datacenter IPs, and a scheduled run died with
+    all 14 SIDRA requests timing out on every retry.
+
+    Refusing is not even the main argument -- the data does not move. YEARS is
+    pinned to 2020-2024, PAM is annual and those years are closed, so every run
+    re-downloaded 3.9 MB of JSON to rebuild a byte-identical 100 KB table. What
+    is committed is the parquet, not the raw JSON: same content, a fortieth of
+    the size, and it is what the warehouse actually loads.
+
+    Refresh deliberately, when YEARS changes or IBGE publishes a revision:
+
+        py -c "from ingestion import ibge_pam; ibge_pam.run(force=True)"
+    """
+    if REFERENCE_PARQUET.exists() and not force:
+        STAGING_DIR.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REFERENCE_PARQUET, PARQUET_FILE)
+        rows, munis = duckdb.sql(
+            f"SELECT count(*), count(DISTINCT municipality_id) "
+            f"FROM read_parquet('{PARQUET_FILE.as_posix()}')"
+        ).fetchone()
+        print(f"[pam] {rows:,} rows | {munis:,} municipalities "
+              f"from {REFERENCE_PARQUET.name}, no request needed", flush=True)
+        return
+
     download(force=force)
     to_parquet()
+
+    REFERENCE_PARQUET.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(PARQUET_FILE, REFERENCE_PARQUET)
+    print(f"[pam] {REFERENCE_PARQUET.name} updated, commit it", flush=True)
 
 
 if __name__ == "__main__":

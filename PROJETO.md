@@ -414,7 +414,27 @@ a CONAB publica edição nova do calendário).
 → export → selftest verde, com as mesmas 455 linhas do fato, 3.313.215 de clima e as mesmas
 previsões (soja RS -22,885%).
 
-### ✅ Solução final do gargalo: os centroides viraram insumo versionado
+### ✅ Desfecho: o IBGE saiu inteiro do caminho crítico do CI
+Depois dos centroides, o run seguinte morreu no **PAM**: as 14 requisições ao
+`apisidra.ibge.gov.br` falharam, todas as 4 tentativas, com `ConnectTimeout` imediato. Os dois
+domínios do IBGE (`servicodados` e `apisidra`) recusam conexão de IP de runner — intermitente no
+começo, consistente depois.
+
+Mesma solução, porque é o mesmo tipo de dado: **`YEARS` está fixo em 2020-2024**, o PAM é anual e
+esses anos estão fechados. Cada run baixava 3,9 MB de JSON para reconstruir uma tabela idêntica.
+Versionado como **`ingestion/reference/pam_municipal.parquet`** — 146 KB, um vigésimo do JSON, e é
+o parquet que o warehouse carrega de fato. Atualizar é deliberado:
+`py -c "from ingestion import ibge_pam; ibge_pam.run(force=True)"`.
+
+**O CI agora depende só de CONAB e NASA POWER**, as duas fontes que respondem ao runner. Validado
+apagando todo o `data/` do IBGE: ingestão completa → `dbt build` 29/29 → export → selftest, tudo
+verde, e os CSVs **sem uma linha de diferença**.
+
+Os três insumos versionados seguem a mesma regra e a mesma justificativa (`crop_calendar.csv`,
+`centroids.json`, `pam_municipal.parquet`): derivado uma vez da fonte oficial, commitado,
+regenerado sob comando. **Antes de otimizar um download, perguntar se o dado muda.**
+
+### O gargalo anterior: os centroides viraram insumo versionado
 O 5º run mostrou que paralelizar o IBGE **piora**: a taxa decaiu **124 → 75 → 53 → menos de
 5 por minuto** ao longo do run, até a API parar de aceitar conexões e derrubar o job mesmo com
 4 tentativas por município. O `servicodados.ibge.gov.br` estrangula IP de datacenter de forma
