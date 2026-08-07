@@ -48,20 +48,46 @@ yields as (
 
 ),
 
-trend as (
+trend_parts as (
 
+    -- Least squares written out, because BigQuery has no regr_slope or
+    -- regr_intercept and DuckDB does. covar_pop(y, x) / var_pop(x) is the same
+    -- estimator, from functions both adapters have.
+    --
+    -- The null filter reproduces what the regr_ functions do implicitly: they
+    -- drop a row when either side is null, so every aggregate has to run over
+    -- the same rows. Without it, var_pop and avg over the year would count
+    -- rows that the covariance dropped, and the trend would tilt.
     select
         w.crop_name,
         w.state_code,
-        regr_slope(y.yield_kg_ha, y.harvest_year)     as yield_slope,
-        regr_intercept(y.yield_kg_ha, y.harvest_year) as yield_intercept
+        covar_pop(y.yield_kg_ha, y.harvest_year)
+            / nullif(var_pop(y.harvest_year), 0) as yield_slope,
+        avg(y.yield_kg_ha)                       as mean_yield_kg_ha,
+        avg(y.harvest_year)                      as mean_harvest_year
     from weather w
     join yields y
       on y.crop_name    = w.conab_crop_name
      and y.season_label = w.conab_season_label
      and y.state_code   = w.state_code
      and y.harvest_year = w.harvest_year
+    where y.yield_kg_ha is not null
     group by w.crop_name, w.state_code
+
+),
+
+trend as (
+
+    -- The fitted line passes through the means, which gives the intercept once
+    -- the slope is known. var_pop is zero only for a single distinct year, and
+    -- the nullif above turns that into a null slope - the same answer
+    -- regr_slope gives when it cannot fit a line.
+    select
+        crop_name,
+        state_code,
+        yield_slope,
+        mean_yield_kg_ha - yield_slope * mean_harvest_year as yield_intercept
+    from trend_parts
 
 )
 

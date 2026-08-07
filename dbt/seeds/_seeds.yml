@@ -11,10 +11,13 @@ seeds:
       Rio Grande do Sul is absent from second-crop corn on purpose: CONAB does
       not list a safrinha calendar for the state.
     config:
+      # Type names must be valid in both adapters: BigQuery rejects VARCHAR,
+      # and DuckDB reads STRING as an alias for VARCHAR, so STRING works in
+      # both. INTEGER is accepted by both as well.
       column_types:
-        crop_name: varchar
-        state_code: varchar
-        phase: varchar
+        crop_name: string
+        state_code: string
+        phase: string
         month_number: integer
         year_offset: integer
     columns:
@@ -47,4 +50,8 @@ seeds:
           - not_null
           - accepted_values:
               arguments:
+                # quote: false because the column is an integer. The default
+                # quotes the values, and BigQuery refuses to compare INT64 to
+                # STRING - DuckDB casts implicitly and hides the problem.
                 values: [-1, 0]
+                quote: false

@@ -454,10 +454,47 @@ trouxe 765 linhas novas (série até 31/07 em vez de 28/07), e isso mexeu só na
 não muda. Sem o arredondamento e a ordenação, esse mesmo commit teria reescrito 758 linhas de
 ruído e o histórico do repo seria inútil.
 
-⚠️ **Os passos do BigQuery foram pulados** — `HAS_GCP` falso, secrets ainda não configurados.
-Então o segundo objetivo do workflow, manter as tabelas do sandbox dentro dos 60 dias, ainda
-**não** está sendo cumprido. Falta criar `GCP_SA_KEY` e `GCP_PROJECT` em Settings → Secrets and
-variables → Actions.
+~~⚠️ **Os passos do BigQuery foram pulados**~~ — **resolvido em 07/08 (sessão 7)**: `GCP_SA_KEY` e
+`GCP_PROJECT` criados em Settings → Secrets and variables → Actions. Ver a seção de portabilidade
+logo abaixo: ligar os secrets revelou **quatro** incompatibilidades DuckDB → BigQuery que estavam
+latentes justamente porque o prod não rodava.
+
+### ⚠️ `dbt compile` não prova portabilidade — só a execução prova
+Registrado na sessão 2 que o gaps-and-islands tinha "portabilidade confirmada sem gastar cota" via
+`compile --target prod`. **Estava errado como garantia.** O compile resolve Jinja e macro; quem
+recusa tipo, função e cláusula é o motor do banco, e ele só fala quando executa. Os quatro erros
+abaixo apareceram um a um, cada um escondendo o próximo, porque o `dbt build` para no primeiro:
+
+| # | Onde | O que o BigQuery recusou | Por que o DuckDB não pegou |
+|---|---|---|---|
+| 1 | `_seeds.yml` | `column_types: varchar` → `Invalid value for type: VARCHAR` | `varchar` é o nome nativo dele |
+| 2 | `_seeds.yml` | `accepted_values` em coluna inteira → `No matching signature for operator IN for argument types INT64 and {STRING}` | faz cast implícito de `'-1'` para inteiro |
+| 3 | `int_season_weather.sql` | `partition by grid_latitude, grid_longitude` → `Partitioning by expressions of type FLOAT64 is not allowed` | aceita particionar por float |
+| 4 | `fct_season_risk.sql` | `regr_slope` / `regr_intercept` → `Function not found` | tem a família `regr_*` completa |
+
+Correções, todas escolhidas para não mexer no dev:
+- **`string` em vez de `varchar`.** O DuckDB lê `STRING` como alias de `VARCHAR` — o
+  `information_schema` mostra `VARCHAR` nos dois casos, então o banco de dev fica idêntico.
+  `integer` ficou como estava: é nome legado válido na API do BigQuery.
+- **`quote: false`** no `accepted_values` do `year_offset`, que é a coluna inteira. Os outros três
+  testes de valor aceito são sobre texto e passaram.
+- **`cast(... as {{ dbt.type_string() }})`** no `partition by`, mesmo padrão do `dbt.datediff` já
+  usado no projeto. A grade é de 0,5°, muito mais grossa que qualquer diferença de arredondamento,
+  então o cast agrupa exatamente as mesmas células.
+- **Mínimos quadrados escrito à mão**: `covar_pop(y, x) / var_pop(x)` para a inclinação e
+  `avg(y) - slope * avg(x)` para o intercepto, funções que os dois têm. Com um `where yield_kg_ha
+  is not null` que reproduz o que o `regr_*` faz implicitamente — ele descarta o par quando um lado
+  é nulo, e sem o filtro `var_pop` e `avg` do ano contariam linhas que a covariância descartou,
+  inclinando a tendência. Hoje são 0 nulos nas 448 linhas da regressão, então é salvaguarda, não
+  correção de número.
+
+**Verificado que o dev não mudou:** `dbt build --target dev` 29/29 e o export dos três CSVs
+**byte-idêntico** (`git status` limpo em `app/data/`). O invariante de reprodutibilidade segurou.
+
+**A lição operacional:** um target que não roda não está testado, por mais verde que o CI esteja.
+O seed entrou em 04/08 às 10:44, depois do último `build --target prod` da sessão 1 — passou três
+dias verde porque o CI só exercitava o DuckDB. Se algum dia o prod voltar a ficar mudo, é sinal de
+alerta, não de calmaria.
 
 ### O caminho até aqui: o IBGE saiu inteiro do caminho crítico do CI
 Depois dos centroides, o run seguinte morreu no **PAM**: as 14 requisições ao
@@ -576,10 +613,10 @@ não reclama de arquivo ignorado, ele simplesmente não adiciona.
 **Ainda não existe:** README final.
 
 ### Próximos passos, em ordem
-1. **Configurar `GCP_SA_KEY` e `GCP_PROJECT`** nos secrets. Confirmado em 07/08 pela API do GitHub
-   que o refresh **continua pulando os três passos do BigQuery** (`skipped`): o último `dbt build
-   --target prod` foi em 04/08, então **as tabelas do sandbox expiram por volta de 03/10/2026**.
-   É a única pendência com prazo.
+1. ~~Configurar `GCP_SA_KEY` e `GCP_PROJECT`~~ — **feito em 07/08.** Secrets criados e
+   `dbt build --target prod` **29/29 verde**, rodado da máquina local. Com isso o relógio dos 60
+   dias zerou: **a pendência com prazo (03/10/2026) deixou de existir.** Falta só ver o
+   `refresh.yml` fazer o mesmo sozinho no runner.
 2. README final liderado pelo achado + post no LinkedIn. **Incluir a URL do app** — hoje o README
    cita "Streamlit app" no diagrama mas não tem link nenhum para o dashboard no ar.
 3. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
@@ -805,3 +842,15 @@ E o `end_date` sendo `hoje - 7` faz o cache local **expirar todo dia**; ficou de
 docstring do módulo em vez de virar surpresa. Lacuna de verificação fechada na revisão: o
 `to_parquet` novo só tinha sido testado com 3 células, rodou contra as 255 reais em 17 s
 (3.313.980 linhas), contra os 20 s de antes.
+
+**07/08/2026 — sessão 7 (trabalho)**
+Secrets do GCP configurados pela interface do GitHub (o `gh` CLI não está instalado nesta máquina).
+Foi o que destravou o BigQuery — e o primeiro `dbt build --target prod` em três dias caiu em
+**quatro** incompatibilidades DuckDB → BigQuery, uma escondendo a outra, todas documentadas na
+seção "`dbt compile` não prova portabilidade" acima. Corrigidas e **29/29 verde no prod**, com o
+dev intacto e os três CSVs byte-idênticos.
+Depurar contra o BigQuery **da máquina local** foi o que tornou isso viável: quatro ciclos de ~30 s
+cada, contra ~12 min por tentativa se fosse pelo CI. Custo ~1 GB dos 1 TB mensais do sandbox.
+A suposição derrubada vale além deste projeto: **`dbt compile` prova Jinja, não portabilidade** —
+tipo, função e cláusula só são recusados na execução. E o corolário: **um target que não roda não
+está testado**, por mais verde que o CI esteja.

@@ -78,8 +78,14 @@ dry_islands as (
         grid_longitude,
         day_index,
         month_abs,
+        -- Partitioned by the coordinates cast to text: BigQuery refuses to
+        -- partition by FLOAT64 at all, and DuckDB allows it, so the raw floats
+        -- only work on dev. The grid is 0.5 degrees, far coarser than any
+        -- rounding difference, so the cast groups exactly the same cells.
         day_index - row_number() over (
-            partition by grid_latitude, grid_longitude
+            partition by
+                cast(grid_latitude as {{ dbt.type_string() }}),
+                cast(grid_longitude as {{ dbt.type_string() }})
             order by day_index
         ) as spell_id
     from dry_days
