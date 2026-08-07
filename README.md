@@ -1,87 +1,96 @@
 # Safra Risk Radar
 
+**[→ Live dashboard](https://safra-risk-radar.streamlit.app)** · rebuilt weekly by CI, from
+CONAB, IBGE and NASA POWER through dbt into BigQuery.
+
 **How much of the year-to-year swing in Brazilian soybean and second-crop corn yield is
-explained by weather anomalies during each crop's critical window — and can a shortfall be
-called before the official survey closes?**
+explained by weather in each crop's critical window — and can a shortfall be called before the
+official survey closes?**
 
-Brazil supplies roughly half of the world's soybean exports. A bad *safrinha* (second-crop
-corn) in Mato Grosso moves global feed prices. Yet the official yield figure for a season
-lands months after the weather that caused it. This project quantifies the gap.
-
-> **Status: work in progress (week 1 of 6).** Data ingestion is running; the analysis and
-> dashboard are not built yet. Findings below will be filled in with real results — nothing
-> here is a placeholder claim.
+Brazil supplies roughly half of the world's soybean exports. A bad *safrinha* (second-crop corn)
+in Mato Grosso moves global feed prices. Yet the official yield figure lands months after the
+weather that caused it, and that gap is where trading, crop insurance and rural credit have to
+decide. Weather is the **input** here, already measured — nothing about the future climate is
+being predicted.
 
 ---
 
-## The question behind the question
+## The finding: this is not a yield forecaster
 
-Yield goes up over time because seeds, machinery and practices improve. Any model trained on
-raw yield mostly rediscovers that trend and reports a flattering error metric with no
-predictive value. So the target here is **the residual against each state's yield trend** —
-the part of the harvest that technology does *not* explain.
+Averaged over every season, the model essentially ties the naive baseline of "yield equals
+trend" — 3.4% better on soybean, 1.2% on second-crop corn. Published on that number alone, the
+honest conclusion would be "does not beat the trend."
 
-## Architecture
+**The average hides the result.** Split by how bad the season actually was (soybean,
+walk-forward 2003–2025, RMSE of the yield residual in percentage points):
 
-```
-CONAB grain series ─┐
-IBGE municipal PAM ─┼─→ ingestion (Python) ─→ Parquet ─→ dbt ─→ marts
-NASA POWER daily   ─┘                                     │
-                                                          │
-                                        ┌─────────────────┴────────────────┐
-                                        ▼                                  ▼
-                                 yield model                        Streamlit app
-                                 (temporal backtest)                (public dashboard)
-```
+| Actual deviation | n | Baseline | Model | Change |
+|---|---|---|---|---|
+| Shortfall < -20% | 14 | 34.4 | 20.6 | **-40% error** |
+| -20% to -10% | 15 | 15.7 | 10.8 | **-31% error** |
+| Normal ±10% | 89 | 5.9 | 9.6 | +61% error |
+| Good > +20% | 12 | 33.5 | 34.8 | +4% error |
 
-| Layer | Tech | Why |
-|---|---|---|
-| Extract & load | Python, `requests`, DuckDB | raw files kept verbatim for reproducibility |
-| Transform | dbt Core | staging → intermediate → marts, with tests and docs |
-| Warehouse | DuckDB (dev) / BigQuery (prod) | same dbt project, two targets |
-| Orchestration | GitHub Actions | scheduled refresh + `dbt test` in CI |
-| App | Streamlit | published dashboard, no Node toolchain required |
+The model earns its keep only when the harvest breaks, and actively hurts in a normal year —
+and normal years are 55% of the sample, which is exactly what dilutes the global metric.
+Second-crop corn repeats the pattern, weaker: -27% error on shortfalls, +68% in normal years.
 
-## Data sources
+Read as a detector instead of a forecaster, on seasons finishing 10% or more below trend:
 
-| Source | Grain | Coverage |
-|---|---|---|
-| [CONAB](https://portaldeinformacoes.conab.gov.br) grain series | state × crop × season | 1976/77 → 2025/26 |
-| [IBGE SIDRA 1612](https://sidra.ibge.gov.br/tabela/1612) (PAM) | municipality × crop × year | 1974 → 2024 |
-| [NASA POWER](https://power.larc.nasa.gov) daily | 0.5° grid point | 1981 → present |
+| Crop | Real events | Flagged | Correct | Recall | Precision | Baseline flags |
+|---|---|---|---|---|---|---|
+| Soybean | 29 | 28 | 13 | 45% | 46% | **0** |
+| Second-crop corn | 38 | 34 | 19 | 50% | 56% | **0** |
 
-**Why municipal data when the fact table is by state:** a state centroid is not where the crop
-is. Mato Grosso's centroid sits in forest; Bahia's in unirrigated scrubland. Municipal
-production from PAM locates the real producing belt, and weather is sampled and weighted there.
+The baseline detects zero shortfalls by construction — a trend line never predicts a bad year.
+So the honest framing is: **a shortfall detector that catches about half of them with about
+half false alarms, against a baseline that never warns at all.** For a trader or a credit desk,
+half the shortfalls called early is worth more than 3% of RMSE.
 
-## Method
+## Why the target is a residual, not a yield
 
-1. **Detrend** yield per state and crop, so the target is the residual, not the level.
-2. **Phenological windows, not calendar years** — soybean ~Oct→Feb, second-crop corn ~Feb→Jun,
-   shifted per state.
-3. **Anomalies against the 1991–2020 normal** for that grid point and day of year. 100 mm of
-   rain in May is ordinary in Rio Grande do Sul and a drought signal in Mato Grosso.
-4. **Agronomically meaningful features** — consecutive dry days in the critical window, growing
-   degree days, hot nights, accumulated water deficit. Not 200 unnamed features.
-5. **Temporal validation** — train through season *t*, test on *t+1*, never shuffled. The
-   baseline (forecast = trend) is reported alongside. If the model does not beat the trend,
-   that result gets published too.
+Yield rises over decades because seeds, machinery and practice improve. A model trained on the
+level mostly rediscovers that trend, reports a flattering error and forecasts nothing. The
+target here is the **residual against each state's own yield trend** — the part of the harvest
+technology does not explain.
 
-## Findings so far
+Choosing that trend was itself a result. Twelve detrending methods were compared on
+out-of-sample error:
 
-These are correlations from the built marts, not the output of a validated model.
-The forecasting work comes next, and its results will be reported separately.
+- **A non-linear trend does not fix second-crop corn**, even though the crop grew from 1,796 to
+  5,198 kg/ha as it went from marginal to dominant. `log_linear` is the *worst* of the twelve
+  (RMSE 39.4 against 31.5 for a straight line): in log space the early expansion extrapolates
+  into nonsense. Quadratic and Theil-Sen also lose to the line.
+- **What wins is not extrapolating at all** — a 3-year moving average, RMSE 28.3.
+- **And the straight line stayed anyway.** The moving average is the better *forecast* and the
+  worse *target*: it has already absorbed recent weather, so a residual against it carries mean
+  reversion instead of climate, and every model trained on that target came out ~50% worse than
+  its own baseline. Picking the trend by the best baseline is not the same as picking it by the
+  best end-to-end system, and only the second one matters.
 
-**Weather in the critical window tracks yield, in the direction agronomy predicts.**
-Against each state's own 1992-2020 normal, over 1992-2025:
+## What did not work
+
+- **The *veranico* is not the strong variable it was expected to be.** The dry spell inside the
+  critical window — longest run of consecutive dry days, computed by gaps-and-islands over the
+  daily series — correlates *worse* with the yield residual than a plain count of dry days
+  (-0.25 against -0.39 on soybean). Thresholds of 1, 2 and 5 mm were tested; the definition is
+  not the problem. It was demoted from a model feature to a descriptive column.
+- Measuring the *whole* spell that merely touches the window was tried and rejected: in Bahia
+  the window closes in April, right as the five-month dry season begins, so the metric picked up
+  the dry season rather than a drought event.
+
+## What the data shows
+
+Weather in the critical window tracks yield in the direction agronomy predicts. Against each
+state's own 1992–2020 normal, over 1992–2025:
 
 | Crop | Dry-day anomaly | Rainfall anomaly | Temperature anomaly |
 |---|---|---|---|
 | Soybean | **-0.39** | +0.29 | -0.29 |
 | Second-crop corn | -0.26 | +0.21 | -0.18 |
 
-**Climate exposure is wildly uneven between states** — the single most useful result
-so far. Correlation of soybean yield residual against weather anomaly:
+**Climate exposure is wildly uneven between states** — correlation of soybean yield residual
+against weather anomaly:
 
 | State | Rainfall | Dry days |
 |---|---|---|
@@ -93,30 +102,92 @@ so far. Correlation of soybean yield residual against weather anomaly:
 | Goiás | +0.15 | -0.24 |
 | Mato Grosso | +0.13 | -0.40 |
 
-Rio Grande do Sul is roughly four times as rainfall-sensitive as Mato Grosso. A
-national average hides this completely: the same drought that barely dents Mato
-Grosso is what breaks a harvest in the South. Anyone pricing crop risk on a
-country-level number is mispricing both states.
+Rio Grande do Sul is roughly four times as rainfall-sensitive as Mato Grosso. A national average
+hides this completely: the drought that barely dents Mato Grosso is what breaks a harvest in the
+South. Anyone pricing crop risk off a country-level number is mispricing both states.
 
-**The two worst seasons in the series are real events the data found unaided:**
+The two worst seasons in the series are real events the pipeline found unaided — Rio Grande do
+Sul soybean in 2005 at **-67% against trend** with 17 extra dry days (the 2004/05 drought), and
+Paraná second-crop corn in 2021 at **-51%** with rainfall at **-2.06 standard deviations** (the
+2021 safrinha failure).
 
-- **Rio Grande do Sul soybean, 2005: -67% against trend**, with 17 extra dry days.
-  The 2004/05 drought.
-- **Paraná second-crop corn, 2021: -51%**, with rainfall at **-2.06 standard
-  deviations**. The safrinha failure of 2021.
+## Architecture
 
-## Known limitations
+```
+CONAB grain series ─┐
+IBGE municipal PAM ─┼─→ ingestion (Python) ─→ Parquet ─→ dbt ─→ marts
+NASA POWER daily   ─┘                                     │
+                                                          │
+                                        ┌─────────────────┴────────────────┐
+                                        ▼                                  ▼
+                                 yield model                        Streamlit app
+                                 (walk-forward backtest)            (public dashboard)
+```
 
-- **The linear detrend does not fit second-crop corn.** Its yield went from 1,796 to
-  5,198 kg/ha as the crop moved from marginal to dominant — growth a straight line
-  cannot follow, so early-season residuals carry trend error rather than weather
-  signal. Evidence: restricting the series to 2010+ lifts the dry-day correlation
-  from -0.26 to -0.48, while soybean holds steady at ~-0.38 either way. The
-  forecasting model needs a non-linear trend, a later start date, or both.
-- **Rio Grande do Sul is excluded from the corn analysis** — CONAB publishes no
-  safrinha calendar for the state, because it does not grow a meaningful second crop.
-- Correlation here is in-sample and uses a trend fitted over the whole series. It
-  describes the record; it does not forecast.
+| Layer | Tech | Why |
+|---|---|---|
+| Extract & load | Python, `requests`, DuckDB | raw files kept verbatim for reproducibility |
+| Transform | dbt Core | staging → intermediate → marts, with tests |
+| Warehouse | DuckDB (dev) / BigQuery (prod) | same dbt project, two targets |
+| Orchestration | GitHub Actions | weekly refresh, both targets, plus CI on every push |
+| App | Streamlit | published dashboard, no Node toolchain required |
+
+The same dbt project targets both warehouses, so the SQL stays close to ANSI. That portability
+is enforced by actually running it: `dbt compile` resolves Jinja, but only execution rejects a
+type, a function or a clause one engine has and the other does not.
+
+The published app reads exported CSVs rather than querying the warehouse, so the dashboard costs
+nothing to serve and does not break if the BigQuery sandbox tables expire. Those exports are
+byte-reproducible — rebuilding the warehouse from scratch on another machine and re-exporting
+produces identical files, which is what lets the weekly commit touch only rows that really moved.
+
+## Data sources
+
+| Source | Grain | Coverage |
+|---|---|---|
+| [CONAB](https://portaldeinformacoes.conab.gov.br) grain series | state × crop × season | 1976/77 → 2025/26 |
+| [IBGE SIDRA 1612](https://sidra.ibge.gov.br/tabela/1612) (PAM) | municipality × crop × year | 1974 → 2024 |
+| [NASA POWER](https://power.larc.nasa.gov) daily | 0.5° grid point | 1991 → present |
+
+**Why municipal data when the fact table is by state:** a state centroid is not where the crop
+is. Mato Grosso's centroid sits in forest, Bahia's in unirrigated scrubland. Municipal production
+from PAM locates the real producing belt — the municipalities making up 80% of each state's grain
+output, 510 of them — and weather is sampled and weighted there.
+
+Those 510 hubs collapse to 255 distinct NASA POWER cells, and the many-to-one ratio varies sharply
+by state: 3.3 hubs per cell in Paraná against 1.0 in Bahia. Summing rainfall after that join would
+triple Paraná's total and leave Bahia's untouched — a silent, region-biased error. Every weather
+aggregate deduplicates by cell before summing.
+
+## Method
+
+1. **Detrend** yield per state and crop, so the target is the residual, not the level.
+2. **Phenological windows, not calendar years.** Planting and harvest months come from CONAB's
+   official calendar, parsed out of the PDF's coloured bars rather than typed by hand. The
+   critical window is derived from it: last planting month through one month before harvest ends.
+3. **Anomalies against each state's own normal.** 100 mm of rain in May is ordinary in Rio Grande
+   do Sul and a drought signal in Mato Grosso.
+4. **Named agronomic features** — dry days in the window, rainfall, temperature, growing degree
+   days, each measured against that state's normal. Not 200 anonymous columns.
+5. **Walk-forward validation.** Trend, climate normals and model are all refit each season using
+   only prior years; nothing from season *T* exists when *T* is predicted. The baseline
+   ("yield = trend") is reported alongside, and would have been published had it won.
+
+## Scope and limitations
+
+- **Rio Grande do Sul is excluded from second-crop corn** — CONAB publishes no safrinha calendar
+  for the state because it does not grow a meaningful second crop. A deliberate cut, not a gap.
+- **The current season is a survey estimate, not a realized harvest**, and CONAB's file carries no
+  survey date. It is treated as a forecast target and kept out of training truth.
+- **The model is only useful on shortfalls.** In a normal year it is worse than assuming the
+  trend. It should be read as an alarm, not as a yield number.
+- **State-level yield hides intra-state variation.** Production-weighted weather sampling reduces
+  this but does not remove it.
+- **A season still in progress is not predicted.** Partial windows are refused rather than
+  extrapolated: measuring incomplete weather against a full-window normal produces a fake anomaly,
+  which once turned a Paraná forecast into +99%.
+- Yield in the source is rounded to one decimal in t/ha, and is recomputed from production and
+  area to preserve the precision residual analysis needs.
 
 ## Reproducing
 
@@ -129,20 +200,14 @@ cd dbt
 dbt build                        # DuckDB target by default
 ```
 
-`data/` is gitignored — the ingestion step rebuilds it from the public sources.
+`data/` is gitignored — the ingestion step rebuilds it from the public sources. The CONAB
+calendar, municipal PAM table and hub centroids are versioned instead of re-downloaded: they are
+derived once from the official source and regenerated on purpose, which also keeps the two IBGE
+APIs (which refuse datacenter IPs) off the CI critical path.
 
-To run against BigQuery instead, set `GCP_KEYFILE` and `GCP_PROJECT` (see `.env.example`),
-then `python -m ingestion --target prod` and `dbt build --target prod`. dbt commands run from
-inside `dbt/`, since the DuckDB path is relative to the working directory.
-
-## Known limitations
-
-- The most recent season in CONAB is a **survey estimate, not a realized harvest**, and the file
-  carries no survey date. It is treated as a forecast target and excluded from training truth.
-- Yield in the source is rounded to one decimal in t/ha. It is recomputed from production and
-  area, which preserves the precision the residual analysis needs.
-- State-level yield hides intra-state variation. A weighted weather sample reduces, but does not
-  eliminate, this.
+To run against BigQuery, set `GCP_KEYFILE` and `GCP_PROJECT` (see `.env.example`), then
+`python -m ingestion --target prod` and `dbt build --target prod`. dbt commands run from inside
+`dbt/`, since the DuckDB path is relative to the working directory.
 
 ## License
 
