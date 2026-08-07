@@ -519,6 +519,41 @@ novos. A correção definitiva é cache incremental por época — histórico at
 `actions/cache` e só o ano corrente por request — que levaria o refresh a ~2-3 min. Decidido em
 04/08 **não** fazer agora: o paralelismo já traz para dentro do orçamento de tempo.
 
+### ⚠️ O cache do POWER era validado só por existência (warehouse local 3 dias atrás)
+Em 07/08 um `python -m ingestion --target dev` local imprimiu `19910101 -> 20260731` e carregou
+`1991-01-01 -> 2026-07-28`. O cache tinha sido baixado três dias antes e `fetch_cell` devolvia o
+arquivo **só por ele existir**, sem olhar até quando ia. O CI nunca viu isso — runner limpo começa
+sem cache. Um `export_app_data` local depois disso teria regredido os CSVs de `app/data` que o
+refresh semanal já havia commitado com dado mais novo.
+
+Agora todo run lê a última data de dentro de cada arquivo e rebaixa as células que param antes da
+janela pedida. **O POWER responde exatamente a janela pedida**, preenchendo com -999 os dias que
+ainda não publicou (verificado na API ao vivo em 07/08: `end` um dia atrás volta completo, com -999
+na cauda). Por isso a data dentro do arquivo *é* a data com que ele foi pedido, e a comparação
+nunca entra em loop rebaixando tudo à espera de dado que não existe — confirmado rodando duas vezes
+seguidas: o segundo run não baixa nada.
+
+- Ler os 255 arquivos custa 8-14 s (quente/frio), contra minutos de download. mtime ou tamanho
+  seriam chute: a data está dentro do payload.
+- Arquivo ilegível (escrita interrompida) conta como ausente e é rebaixado, em vez de estourar no
+  `to_parquet` minutos depois.
+- `to_parquet` também avisa quando as células discordam entre si: uma faixa única para a tabela
+  inteira escondia justamente o subconjunto que parava antes.
+- `--force` continua tudo-ou-nada e refaz as 510 requisições de centroide ao IBGE, que foram
+  deliberadamente tiradas do caminho. Para pular o rebaixamento sem isso existe `--allow-stale`,
+  que só avisa alto — útil offline ou mexendo em parsing.
+
+**Efeito colateral aceito: o cache local passou a valer um dia.** O `end_date` é `hoje - 7`, então
+anda sozinho — medido em 07/08 com o cache baixado na mesma manhã: hoje dá `255 reach 20260731,
+0 stale`; com a data um dia à frente, `0 reach 20260801, 255 stale`. Ou seja, **todo `python -m
+ingestion` num dia novo rebaixa os 70 MB inteiros (~3 min) para ganhar 1 dia de clima**. Antes era
+permanente, mas só porque era o bug. Fica assim de propósito: carregar em silêncio a janela da
+semana passada é pior que gastar 3 min, e quem quiser evitar o download tem o `--allow-stale`.
+É mais um argumento para o cache incremental por época, que resolveria os dois.
+
+**Isto não substitui o cache incremental por época**, que continua sendo a correção definitiva:
+o que mudou é que a falha deixou de ser silenciosa.
+
 ### ⚠️ Armadilha: `data/` no .gitignore também casava com `app/data/`
 Uma linha `data/` sem barra inicial casa com **qualquer** diretório `data` em qualquer nível.
 Os CSVs do dashboard estavam sendo silenciosamente ignorados — o commit `8878ea9` foi feito com
