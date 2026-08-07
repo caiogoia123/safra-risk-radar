@@ -18,15 +18,34 @@ from __future__ import annotations
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 import duckdb
 import pandas as pd
 
-from . import RAW_DIR, STAGING_DIR, http
+from . import STAGING_DIR, http
 
 PAM_PARQUET = STAGING_DIR / "ibge_pam_municipal.parquet"
-CENTROID_CACHE = RAW_DIR / "ibge" / "centroids.json"
 PARQUET_FILE = STAGING_DIR / "producer_hubs.parquet"
+
+# Versioned input, not a throwaway cache -- it lives beside the code rather than
+# under the gitignored data/.
+#
+# Municipal boundaries are redrawn every few years, so re-deriving these from the
+# IBGE mesh API on every run fetched 510 outlines to compute 16 KB of numbers
+# that had not moved. On a CI runner it was also the least reliable thing in the
+# pipeline: IBGE throttles datacenter IPs progressively -- the fetch rate decayed
+# 124 -> 75 -> 53 -> under 5 per minute across one run, and it eventually stopped
+# accepting connections altogether, failing the job after every retry.
+#
+# Same treatment as the CONAB planting calendar: derived once from the official
+# source, committed, and regenerated deliberately.
+#
+#     py -c "from ingestion import geo; geo.run(force=True)"
+#
+# Run that when IBGE publishes a new mesh edition, or when the hub ranking picks
+# up municipalities this file does not cover, and commit the result.
+CENTROID_CACHE = Path(__file__).parent / "reference" / "centroids.json"
 
 # Keep adding municipalities, biggest first, until this share of the state's
 # production is covered.
@@ -158,17 +177,23 @@ def run(force: bool = False) -> None:
     cache = {} if force else _load_cache()
     cached_at_start = len(cache)
 
-    # Concurrent for the same reason as the POWER download: on a clean CI runner
-    # this is 510 requests that used to run one at a time, silently, and the
-    # step is only as fast as the sum of its waiting.
     missing = [
         int(hub["municipality_id"])
         for hub in hubs
         if str(hub["municipality_id"]) not in cache
     ]
-    if missing:
-        print(f"[geo] {len(hubs) - len(missing)} cached, {len(missing)} to fetch",
+    if not missing:
+        print(f"[geo] {len(hubs)} centroids from {CENTROID_CACHE.name}, no request needed",
               flush=True)
+    if missing:
+        # Reaching here in CI means the hub ranking moved and the committed file
+        # no longer covers it. Say so plainly: the fix is to regenerate and
+        # commit, not to hope IBGE answers from a datacenter IP.
+        print(f"[geo] {len(hubs) - len(missing)} from {CENTROID_CACHE.name}, "
+              f"{len(missing)} missing -- fetching from IBGE", flush=True)
+        if not force:
+            print("[geo] if this is CI, commit the regenerated centroids instead: "
+                  "py -c \"from ingestion import geo; geo.run(force=True)\"", flush=True)
         started = time.monotonic()
         completed = 0
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
@@ -190,9 +215,18 @@ def run(force: bool = False) -> None:
         hub["grid_latitude"] = round(round(lat / GRID_LAT) * GRID_LAT, 4)
         hub["grid_longitude"] = round(round(lon / GRID_LON) * GRID_LON, 4)
 
-    CENTROID_CACHE.parent.mkdir(parents=True, exist_ok=True)
-    CENTROID_CACHE.write_text(json.dumps(cache), encoding="utf-8")
-    print(f"[geo] centroids: {cached_at_start} cached, {len(cache) - cached_at_start} fetched")
+    # Only rewrite when something was actually fetched, and write it sorted:
+    # this file is committed, so an unnecessary rewrite is a spurious diff, and
+    # concurrent completion order would otherwise shuffle the keys every run.
+    if len(cache) != cached_at_start or force:
+        CENTROID_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        CENTROID_CACHE.write_text(
+            json.dumps(dict(sorted(cache.items())), indent=0, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        print(f"[geo] centroids: {cached_at_start} known, "
+              f"{len(cache) - cached_at_start} fetched -- {CENTROID_CACHE.name} updated, "
+              "commit it", flush=True)
 
     STAGING_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -23,8 +23,25 @@ OUTPUT_DIR = REPO_ROOT / "app" / "data"
 
 
 def export_season_risk() -> pd.DataFrame:
+    # Explicit ordering: a bare `select *` returns whatever order the engine
+    # happens to produce, and reloading the warehouse was enough to shuffle it.
+    # That alone rewrote 63 lines of an otherwise unchanged file.
     with duckdb.connect(str(DB_PATH), read_only=True) as con:
-        return con.sql("select * from main_marts.fct_season_risk").df()
+        return con.sql(
+            """
+            select * from main_marts.fct_season_risk
+            order by crop_name, state_code, harvest_year
+            """
+        ).df()
+
+
+# Sort keys per export, so the committed files depend on the data and nothing
+# else -- not engine order, not the order concurrent fetches happened to finish.
+SORT_KEYS = {
+    "season_risk": ["crop_name", "state_code", "harvest_year"],
+    "backtest": ["crop_name", "model", "state_code", "harvest_year"],
+    "forecast": ["crop_name", "state_code"],
+}
 
 
 # Enough precision for a dashboard by a wide margin, and it makes the export
@@ -68,6 +85,7 @@ def main() -> None:
         ("forecast", forecast),
     ]:
         path = OUTPUT_DIR / f"{name}.csv"
+        frame = frame.sort_values(SORT_KEYS[name], kind="stable").reset_index(drop=True)
         _stabilise(frame).to_csv(path, index=False)
         print(f"{path.relative_to(REPO_ROOT)}: {len(frame)} linhas, {path.stat().st_size/1024:.0f} KB")
 

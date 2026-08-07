@@ -414,6 +414,33 @@ a CONAB publica edição nova do calendário).
 → export → selftest verde, com as mesmas 455 linhas do fato, 3.313.215 de clima e as mesmas
 previsões (soja RS -22,885%).
 
+### ✅ Solução final do gargalo: os centroides viraram insumo versionado
+O 5º run mostrou que paralelizar o IBGE **piora**: a taxa decaiu **124 → 75 → 53 → menos de
+5 por minuto** ao longo do run, até a API parar de aceitar conexões e derrubar o job mesmo com
+4 tentativas por município. O `servicodados.ibge.gov.br` estrangula IP de datacenter de forma
+progressiva — quanto mais se insiste, menos ele responde.
+
+A saída não foi ajustar concorrência, foi **parar de baixar**: contorno municipal é dado
+estático, redesenhado a cada vários anos. Estávamos fazendo 510 requisições semanais para
+recalcular **16 KB de números que não mudam**. O arquivo saiu de `data/raw/ibge/` (gitignorado)
+para **`ingestion/reference/centroids.json`**, versionado — mesmo tratamento já dado ao calendário
+da CONAB extraído do PDF: derivado uma vez da fonte oficial, commitado, regenerado de propósito.
+
+- O passo `geo` caiu de **15+ min (e falhando) para 0,12 s, sem nenhuma requisição**.
+- Some do CI a fonte mais instável das três; sobra só o POWER, que tem dado novo de verdade.
+- Se o ranking de polos mudar e faltar município, o log diz exatamente o que fazer:
+  `py -c "from ingestion import geo; geo.run(force=True)"` e commitar. Testado removendo 2
+  entradas — busca só as que faltam, os valores voltam idênticos e o arquivo é reescrito ordenado.
+- O arquivo só é reescrito quando algo é buscado, e com chaves ordenadas: sendo versionado, uma
+  reescrita à toa seria diff falso.
+
+### ⚠️ `select *` sem `order by` não é determinístico
+Descoberto ao revalidar: recarregar o warehouse mudou a ordem das linhas do `fct_season_risk` e
+reescreveu **63 linhas** de `season_risk.csv` sem nenhum valor ter mudado. Agora o export ordena
+explicitamente (no SQL e no pandas, `SORT_KEYS` por dataset). Junto com o arredondamento, os CSVs
+passaram a depender só do dado: **dois exports com o warehouse inteiro recarregado no meio saem
+byte a byte idênticos** — que é a condição para o commit automático semanal só mexer no que mudou.
+
 ### 3º run: o paralelismo funcionou, e a falha foi de versão
 Ingestão caiu de **>59 min para 11m38s** — problema de tempo resolvido. O run mesmo assim falhou,
 com `ConnectTimeout` no SIDRA, e o traceback mostrava `requests.get` direto em `_fetch`: **o CI
