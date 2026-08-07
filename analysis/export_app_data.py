@@ -11,6 +11,7 @@ readable. The scheduled CI in week 5 refreshes these the same way.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import duckdb
@@ -33,6 +34,21 @@ def export_season_risk() -> pd.DataFrame:
             order by crop_name, state_code, harvest_year
             """
         ).df()
+
+
+def export_meta() -> dict[str, str]:
+    """Facts about the data that the dashboard states in prose.
+
+    The weather cutoff used to be typed into the app text. It went stale the
+    first time the scheduled refresh ran: the series moved to a later date and
+    the sentence did not, so the published app misreported its own coverage.
+    Anything the copy asserts about the data has to be read from the data.
+    """
+    with duckdb.connect(str(DB_PATH), read_only=True) as con:
+        cutoff = con.sql(
+            "select max(weather_date) from main_staging.stg_weather_daily"
+        ).fetchone()[0]
+    return {"weather_through": cutoff.isoformat()}
 
 
 # Sort keys per export, so the committed files depend on the data and nothing
@@ -88,6 +104,14 @@ def main() -> None:
         frame = frame.sort_values(SORT_KEYS[name], kind="stable").reset_index(drop=True)
         _stabilise(frame).to_csv(path, index=False)
         print(f"{path.relative_to(REPO_ROOT)}: {len(frame)} linhas, {path.stat().st_size/1024:.0f} KB")
+
+    # Sorted keys and a trailing newline for the same reason the CSVs are
+    # rounded and ordered: this file is committed, so it may only change when
+    # the data does.
+    meta = export_meta()
+    meta_path = OUTPUT_DIR / "meta.json"
+    meta_path.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"{meta_path.relative_to(REPO_ROOT)}: {meta}")
 
 
 if __name__ == "__main__":

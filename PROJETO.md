@@ -339,6 +339,13 @@ O app lidera pelo resultado honesto ("weather predicts the bad harvests"), tem t
 gráfico e uma seção final de limitações que inclui o viés de seleção. Cores da paleta validada,
 tema claro fixo em `.streamlit/config.toml` — tema escuro exigiria revalidar os passos.
 
+**Nada que o texto afirma sobre o dado pode ser digitado à mão.** A frase do aviso de janela
+truncada trazia "the weather series ends 28 July 2026" escrito no código, e o primeiro refresh
+automático já a deixou errada: a série andou para 31/07 e a frase não. O export passou a gravar
+`app/data/meta.json` (`weather_through`, lido do `stg_weather_daily`) e o app formata a data de
+lá; o `selftest` falha se o arquivo sumir ou vier sem data parseável, porque essa data é impressa
+em prosa e um `KeyError` derrubaria a página inteira, não só a frase.
+
 **Para publicar** (o Caio faz, precisa da conta dele): commitar e push, ir a share.streamlit.io,
 "New app" → repo `caiogoia123/safra-risk-radar`, branch `main`, main file `app/streamlit_app.py`.
 O Community Cloud acha o `app/requirements.txt` sozinho.
@@ -486,6 +493,11 @@ reescreveu **63 linhas** de `season_risk.csv` sem nenhum valor ter mudado. Agora
 explicitamente (no SQL e no pandas, `SORT_KEYS` por dataset). Junto com o arredondamento, os CSVs
 passaram a depender só do dado: **dois exports com o warehouse inteiro recarregado no meio saem
 byte a byte idênticos** — que é a condição para o commit automático semanal só mexer no que mudou.
+
+**E vale entre máquinas, não só entre dois runs aqui:** em 07/08, com o `data/` local
+ressincronizado até 31/07, o export reproduziu os três CSVs **byte-idênticos aos que o runner
+tinha commitado** — mesmo tendo passado por download concorrente, outra máquina e outro sistema
+operacional. Sem o arredondamento e a ordenação explícita isso não aconteceria.
 
 ### 3º run: o paralelismo funcionou, e a falha foi de versão
 Ingestão caiu de **>59 min para 11m38s** — problema de tempo resolvido. O run mesmo assim falhou,
@@ -721,3 +733,23 @@ do POWER acima. Corrigido com download concorrente e `-u`; falta rodar de novo p
 Duas lições que valem além deste projeto: **estimativa de tempo medida na máquina local não vale
 para runner de CI** (IP de datacenter é tratado diferente por APIs públicas), e **todo passo longo
 precisa imprimir progresso sem buffer**, senão não há como distinguir lento de travado.
+
+**07/08/2026 — sessão 6 (trabalho)**
+Pre-flight da publicação: working tree limpo e sincronizado, repo público, os três CSVs e o
+`config.toml` versionados, `app/requirements.txt` com wheel binária para os Pythons que o
+Community Cloud oferece (pandas 3.0.5 exige ≥3.11 e tem cp312/cp313 — nada compila lá).
+Achados dois problemas que só apareceram por olhar o dado em vez do código: a data da série
+climática escrita à mão no app (já errada pelo primeiro refresh automático, corrigida aqui) e o
+cache do POWER aceito sem conferir cobertura, que virou tarefa própria e foi consertada no mesmo
+dia — as duas seções acima.
+Screenshot falhou de novo pelo painel do preview não estar visível; a conferência foi por DOM,
+com a frase corrigida lida na página renderizada.
+
+Revisão do conserto do cache, feito em sessão paralela: aprovado com dois ajustes. O aviso do
+`--allow-stale` dizia que o warehouse terminaria na data da célula mais atrasada, quando a tabela
+termina na **mais nova** — a mesma confusão global-vs-célula que tornara o bug original invisível,
+e visível só no caso misto (uma célula atrás, as outras em dia). A mensagem parou de citar data.
+E o `end_date` sendo `hoje - 7` faz o cache local **expirar todo dia**; ficou declarado no
+docstring do módulo em vez de virar surpresa. Lacuna de verificação fechada na revisão: o
+`to_parquet` novo só tinha sido testado com 3 células, rodou contra as 255 reais em 17 s
+(3.313.980 linhas), contra os 20 s de antes.

@@ -10,6 +10,8 @@ on average, and saying so up front is the point -- a dashboard that opened with
 
 from __future__ import annotations
 
+import json
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -39,9 +41,21 @@ def load(name: str) -> pd.DataFrame:
     return pd.read_csv(DATA_DIR / f"{name}.csv")
 
 
+@st.cache_data
+def load_meta() -> dict[str, str]:
+    return json.loads((DATA_DIR / "meta.json").read_text(encoding="utf-8"))
+
+
+def long_date(value: date) -> str:
+    # "%-d" is not portable to Windows and "%d" pads to "05 August"; strip the
+    # zero instead of asking the platform for a format it may not have.
+    return value.strftime("%d %B %Y").lstrip("0")
+
+
 season_risk = load("season_risk")
 backtest = widen(load("backtest"))
 forecast = load("forecast")
+weather_through = date.fromisoformat(load_meta()["weather_through"])
 
 # ----------------------------------------------------------------------- header
 
@@ -169,7 +183,7 @@ if not suppressed.empty:
                       for r in suppressed.itertuples())
     st.info(
         f"**Withheld: {names}.** Their critical windows run into August and the weather "
-        f"series ends 28 July 2026, so the window is only "
+        f"series ends {long_date(weather_through)}, so the window is only "
         f"{suppressed['janela_coberta_pct'].min():.0f}–"
         f"{suppressed['janela_coberta_pct'].max():.0f}% covered. A truncated window reads "
         "to the model as an extreme drought — before this guard existed it forecast +99% "

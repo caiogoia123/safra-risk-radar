@@ -9,7 +9,9 @@ the published dashboard for everyone, and nothing else in the repo would notice.
 
 from __future__ import annotations
 
+import json
 import sys
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -47,6 +49,19 @@ def main() -> int:
             return 1
         frames[name] = frame
         print(f"ok   {name}.csv: {len(frame)} rows")
+
+    # The app prints this date in prose, so a missing or unparseable value
+    # takes the whole page down rather than degrading one sentence.
+    meta_path = DATA_DIR / "meta.json"
+    if not meta_path.exists():
+        print(f"FAIL: {meta_path} missing -- run `py -m analysis.export_app_data`")
+        return 1
+    try:
+        cutoff = date.fromisoformat(json.loads(meta_path.read_text(encoding="utf-8"))["weather_through"])
+    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+        print(f"FAIL: meta.json has no usable 'weather_through': {exc}")
+        return 1
+    print(f"ok   meta.json: weather through {cutoff}")
 
     wide = c.widen(frames["backtest"])
     for role in ("baseline", "model"):
