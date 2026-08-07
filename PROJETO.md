@@ -549,10 +549,10 @@ anda sozinho — medido em 07/08 com o cache baixado na mesma manhã: hoje dá `
 ingestion` num dia novo rebaixa os 70 MB inteiros (~3 min) para ganhar 1 dia de clima**. Antes era
 permanente, mas só porque era o bug. Fica assim de propósito: carregar em silêncio a janela da
 semana passada é pior que gastar 3 min, e quem quiser evitar o download tem o `--allow-stale`.
-É mais um argumento para o cache incremental por época, que resolveria os dois.
 
-**Isto não substitui o cache incremental por época**, que continua sendo a correção definitiva:
-o que mudou é que a falha deixou de ser silenciosa.
+**Isto não substitui o cache incremental por época**, que continua sendo a correção definitiva —
+e que agora resolveria as duas coisas de uma vez. O que mudou aqui é a falha ter deixado de ser
+silenciosa.
 
 ### ⚠️ Armadilha: `data/` no .gitignore também casava com `app/data/`
 Uma linha `data/` sem barra inicial casa com **qualquer** diretório `data` em qualquer nível.
