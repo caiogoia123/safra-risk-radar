@@ -147,7 +147,7 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
 | 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
 | 3 | Marts + testes dbt + análise exploratória (achar o insight) | ✅ |
 | 4 | Modelo, backtest temporal, comparação com baseline | ✅ |
-| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | CI pronto; app pronto, falta publicar |
+| 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | ✅ CI verde (3m34s); app pronto, falta publicar |
 | 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
 
 ## 8. Como rodar
@@ -414,7 +414,33 @@ a CONAB publica edição nova do calendário).
 → export → selftest verde, com as mesmas 455 linhas do fato, 3.313.215 de clima e as mesmas
 previsões (soja RS -22,885%).
 
-### ✅ Desfecho: o IBGE saiu inteiro do caminho crítico do CI
+### ✅✅ CI VERDE — 3m34s, ponta a ponta (04/08)
+Primeiro run completo do `refresh.yml`, do download ao commit:
+
+```
+[pam]   26,320 rows | 2,632 municipalities from pam_municipal.parquet, no request needed
+[geo]   510 centroids from centroids.json, no request needed
+[power] 255/255 downloaded | 142.6/min | 3,313,980 rows
+dbt     PASS=29 WARN=0 ERROR=0
+commit  [main e3b1649] Refresh dashboard data [skip ci] -> 2 files, 12 insertions, 12 deletions
+```
+
+**De >59 min falhando para 3m34s verde.** O POWER, único download que sobrou, roda a **142
+células/min no runner** — mais rápido que na máquina local (75/min), o que reforça que o gargalo
+nunca foi banda, e sim o IBGE recusando IP de datacenter.
+
+**As 12 linhas do commit automático são a prova de que a reprodutibilidade funcionou.** O POWER
+trouxe 765 linhas novas (série até 31/07 em vez de 28/07), e isso mexeu só nas safras em curso:
+`forecast.csv` e `season_risk.csv` com 12 linhas cada, `backtest.csv` **intocado** — o histórico
+não muda. Sem o arredondamento e a ordenação, esse mesmo commit teria reescrito 758 linhas de
+ruído e o histórico do repo seria inútil.
+
+⚠️ **Os passos do BigQuery foram pulados** — `HAS_GCP` falso, secrets ainda não configurados.
+Então o segundo objetivo do workflow, manter as tabelas do sandbox dentro dos 60 dias, ainda
+**não** está sendo cumprido. Falta criar `GCP_SA_KEY` e `GCP_PROJECT` em Settings → Secrets and
+variables → Actions.
+
+### O caminho até aqui: o IBGE saiu inteiro do caminho crítico do CI
 Depois dos centroides, o run seguinte morreu no **PAM**: as 14 requisições ao
 `apisidra.ibge.gov.br` falharam, todas as 4 tentativas, com `ConnectTimeout` imediato. Os dois
 domínios do IBGE (`servicodados` e `apisidra`) recusam conexão de IP de runner — intermitente no
@@ -492,8 +518,8 @@ não reclama de arquivo ignorado, ele simplesmente não adiciona.
 
 ### Próximos passos, em ordem
 1. **Publicar o app** no Community Cloud (5 min, precisa da conta do Caio).
-2. **Configurar os dois secrets** no GitHub e disparar o `refresh.yml` uma vez pela aba Actions,
-   para ver o pipeline inteiro rodar em runner limpo.
+2. **Configurar `GCP_SA_KEY` e `GCP_PROJECT`** nos secrets — sem eles o refresh roda, mas pula a
+   metade do BigQuery, e as tabelas do sandbox expiram em 60 dias.
 3. README final liderado pelo achado + post no LinkedIn.
 4. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
    fechada, medindo quanto de precisão se perde por mês de antecedência ganho. Vira o gráfico
