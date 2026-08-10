@@ -30,3 +30,6 @@ Thumbs.db
 .DS_Store
 .vscode/
 .idea/
+# Local tooling: launch config points at this machine's .venv, and worktrees are
+# scratch checkouts.
+.claude/

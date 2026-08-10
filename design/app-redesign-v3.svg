@@ -1,0 +1,274 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="2028" viewBox="0 0 1440 2028" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif">
+<defs><linearGradient id="fadeOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fcfcfb" stop-opacity="0"/><stop offset="1" stop-color="#fcfcfb" stop-opacity="1"/></linearGradient></defs>
+<rect x="0.0" y="0.0" width="1440.0" height="2028.0" rx="0" fill="#f9f9f7"/>
+<rect x="0.0" y="0.0" width="1440.0" height="68.0" rx="0" fill="#12120f"/>
+<g transform="translate(64,23.0)"><path d="M11,22 V6" stroke="#eb6834" stroke-width="2" stroke-linecap="round"/><path d="M11,10 C6,10 3,7 3,3 C8,3 11,6 11,10 Z" fill="#eb6834"/><path d="M11,10 C16,10 19,7 19,3 C14,3 11,6 11,10 Z" fill="#eb6834" opacity="0.72"/><path d="M11,17 C6,17 3,14 3,10 C8,10 11,13 11,17 Z" fill="#eb6834" opacity="0.52"/><path d="M11,17 C16,17 19,14 19,10 C14,10 11,13 11,17 Z" fill="#eb6834" opacity="0.34"/></g>
+<text x="98.0" y="39.5" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="15.5" font-weight="600" fill="#ffffff" text-anchor="start" letter-spacing="1.6">SAFRA RISK RADAR</text>
+<text x="296.0" y="39.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#8f8e88" text-anchor="start">Brazil · soybean &amp; safrinha corn</text>
+<text x="1376.0" y="38.5" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#c3c2b7" text-anchor="end">GitHub</text>
+<text x="1303.0" y="38.5" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#c3c2b7" text-anchor="end">Method</text>
+<text x="1225.5" y="38.5" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#c3c2b7" text-anchor="end">dbt · BigQuery</text>
+<circle cx="1107.7" cy="34.0" r="4" fill="#0ca30c"/>
+<text x="1096.7" y="38.5" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#c3c2b7" text-anchor="end">Weather through 3 Aug 2026</text>
+<text x="64.0" y="120.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#898781" text-anchor="start" letter-spacing="1.4">SOYBEAN &amp; SAFRINHA CORN  ·  7 STATES  ·  1992–2026</text>
+<text x="64" y="172" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#0b0b0b">Weather does not predict the harvest. It predicts the harvests that <tspan fill="#e34948">fail</tspan>.</text>
+<text x="64.0" y="214.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="16" font-weight="400" fill="#52514e" text-anchor="start">Averaged over every season this model ties with the trend baseline. Restricted to the seasons that actually broke, it removes</text>
+<text x="64.0" y="241.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="16" font-weight="400" fill="#52514e" text-anchor="start">40% of the error — and flags 48% of them in advance, against a baseline that by construction never flags one.</text>
+<rect x="64.0" y="302.0" width="313.0" height="132.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="88.0" y="336.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="600" fill="#898781" text-anchor="start" letter-spacing="1.1">CROP FAILURES FLAGGED</text>
+<text x="88.0" y="384.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#0b0b0b" text-anchor="start">48%</text>
+<text x="88.0" y="410.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">in advance · baseline flags 0%</text>
+<rect x="397.0" y="302.0" width="313.0" height="132.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="421.0" y="336.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="600" fill="#898781" text-anchor="start" letter-spacing="1.1">ERROR REMOVED ON FAILURES</text>
+<text x="421.0" y="384.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#0b0b0b" text-anchor="start">40%</text>
+<text x="421.0" y="410.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">soybean seasons &gt;20% below trend</text>
+<rect x="730.0" y="302.0" width="313.0" height="132.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="754.0" y="336.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="600" fill="#898781" text-anchor="start" letter-spacing="1.1">SEASONS BACKTESTED</text>
+<text x="754.0" y="384.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#0b0b0b" text-anchor="start">23</text>
+<text x="754.0" y="410.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">2003–2025 · walk-forward refit</text>
+<rect x="1063.0" y="302.0" width="313.0" height="132.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="1087.0" y="336.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="600" fill="#898781" text-anchor="start" letter-spacing="1.1">DAILY WEATHER ROWS</text>
+<text x="1087.0" y="384.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#0b0b0b" text-anchor="start">3.3M</text>
+<text x="1087.0" y="410.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">NASA POWER · 255 grid cells</text>
+<rect x="64.0" y="474.0" width="500.0" height="424.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="90.0" y="514.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="17" font-weight="600" fill="#0b0b0b" text-anchor="start">2025/26 — the season CONAB has not closed</text>
+<text x="90.0" y="537.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Forecast deviation from each state's own</text>
+<text x="90.0" y="556.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">yield trend. 11 of 13 states scored.</text>
+<text x="390.0" y="570.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#898781" text-anchor="middle">trend</text>
+<line x1="390.0" y1="578.0" x2="390.0" y2="826.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="90.0" y="598.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Soybean · RS</text>
+<path d="M390.0,589.0 H204.9 Q200.9,589.0 200.9,593.0 V598.0 Q200.9,602.0 204.9,602.0 H390.0 Z" fill="#e34948"/>
+<text x="538.0" y="598.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-22.9%</text>
+<text x="90.0" y="630.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Soybean · PR</text>
+<path d="M390.0,621.0 H291.0 Q287.0,621.0 287.0,625.0 V630.0 Q287.0,634.0 291.0,634.0 H390.0 Z" fill="#e34948"/>
+<text x="538.0" y="630.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-12.5%</text>
+<text x="90.0" y="662.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Safrinha corn · GO</text>
+<path d="M390.0,653.0 H324.8 Q320.8,653.0 320.8,657.0 V662.0 Q320.8,666.0 324.8,666.0 H390.0 Z" fill="#e34948"/>
+<text x="538.0" y="662.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-8.4%</text>
+<text x="90.0" y="694.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Soybean · MS</text>
+<path d="M390.0,685.0 H339.1 Q335.1,685.0 335.1,689.0 V694.0 Q335.1,698.0 339.1,698.0 H390.0 Z" fill="#ef8b8a"/>
+<text x="538.0" y="694.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-6.6%</text>
+<text x="90.0" y="726.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Safrinha corn · BA</text>
+<path d="M390.0,717.0 H352.3 Q348.3,717.0 348.3,721.0 V726.0 Q348.3,730.0 352.3,730.0 H390.0 Z" fill="#ef8b8a"/>
+<text x="538.0" y="726.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-5.0%</text>
+<text x="90.0" y="758.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Safrinha corn · MG</text>
+<path d="M390.0,749.0 H352.3 Q348.3,749.0 348.3,753.0 V758.0 Q348.3,762.0 352.3,762.0 H390.0 Z" fill="#ef8b8a"/>
+<text x="538.0" y="758.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-5.0%</text>
+<text x="90.0" y="790.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Soybean · GO</text>
+<path d="M390.0,781.0 H381.1 Q377.1,781.0 377.1,785.0 V790.0 Q377.1,794.0 381.1,794.0 H390.0 Z" fill="#ef8b8a"/>
+<text x="538.0" y="790.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-1.6%</text>
+<text x="90.0" y="822.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Soybean · MT</text>
+<path d="M390.0,813.0 H384.0 Q380.0,813.0 380.0,817.0 V822.0 Q380.0,826.0 384.0,826.0 H390.0 Z" fill="#ef8b8a"/>
+<text x="538.0" y="822.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="end">-1.2%</text>
+<rect x="65.0" y="800.0" width="498.0" height="34.0" rx="0" fill="url(#fadeOut)"/>
+<rect x="549.0" y="578.0" width="5.0" height="248.0" rx="2.5" fill="#e1e0d9"/>
+<rect x="549.0" y="578.0" width="5.0" height="180.4" rx="2.5" fill="#898781"/>
+<text x="90.0" y="874.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="start">scroll for 3 more</text>
+<rect x="588.0" y="474.0" width="788.0" height="424.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="616.0" y="514.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="17" font-weight="600" fill="#0b0b0b" text-anchor="start">The model earns its keep only in the tail</text>
+<text x="616.0" y="537.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Error removed versus the trend baseline, by how far the season really fell.</text>
+<text x="616.0" y="556.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Ordinary seasons are 48% of the sample — which is why the average looks like a tie.</text>
+<rect x="618.0" y="576.0" width="12.0" height="12.0" rx="3" fill="#4a3aa7"/>
+<text x="640.0" y="586.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Soybean</text>
+<rect x="715.0" y="576.0" width="12.0" height="12.0" rx="3" fill="#eb6834"/>
+<text x="737.0" y="586.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Safrinha corn</text>
+<rect x="738.0" y="610.0" width="342.0" height="232.0" rx="0" fill="#e34948" opacity="0.045"/>
+<text x="748.0" y="884.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="start">worse than baseline</text>
+<text x="1288.0" y="884.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">better than baseline</text>
+<line x1="806.5" y1="610.0" x2="806.5" y2="842.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="806.5" y="862.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">-60%</text>
+<line x1="897.7" y1="610.0" x2="897.7" y2="842.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="897.7" y="862.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">-40%</text>
+<line x1="988.8" y1="610.0" x2="988.8" y2="842.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="988.8" y="862.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">-20%</text>
+<line x1="1171.1" y1="610.0" x2="1171.1" y2="842.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1171.1" y="862.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">+20%</text>
+<line x1="1262.3" y1="610.0" x2="1262.3" y2="842.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="1262.3" y="862.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">+40%</text>
+<line x1="1080.0" y1="610.0" x2="1080.0" y2="842.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="1080.0" y="862.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">0</text>
+<text x="722.0" y="631.2" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Failure &lt; -20%</text>
+<text x="722.0" y="648.2" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="end">n = 34</text>
+<path d="M1080.0,612.2 H1259.0 Q1263.0,612.2 1263.0,616.2 V627.2 Q1263.0,631.2 1259.0,631.2 H1080.0 Z" fill="#4a3aa7"/>
+<text x="1273.0" y="626.2" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="start">+40%</text>
+<path d="M1080.0,633.2 H1197.4 Q1201.4,633.2 1201.4,637.2 V648.2 Q1201.4,652.2 1197.4,652.2 H1080.0 Z" fill="#eb6834"/>
+<text x="1211.4" y="647.2" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="start">+27%</text>
+<text x="722.0" y="677.6" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">-20% to -10%</text>
+<text x="722.0" y="694.6" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="end">n = 33</text>
+<path d="M1080.0,658.6 H1216.9 Q1220.9,658.6 1220.9,662.6 V673.6 Q1220.9,677.6 1216.9,677.6 H1080.0 Z" fill="#4a3aa7"/>
+<text x="1230.9" y="672.6" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="start">+31%</text>
+<path d="M1080.0,679.6 H1135.9 Q1139.9,679.6 1139.9,683.6 V694.6 Q1139.9,698.6 1135.9,698.6 H1080.0 Z" fill="#eb6834"/>
+<text x="1149.9" y="693.6" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#52514e" text-anchor="start">+13%</text>
+<text x="722.0" y="724.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Normal ±10%</text>
+<text x="722.0" y="741.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="end">n = 141</text>
+<path d="M1080.0,705.0 H805.6 Q801.6,705.0 801.6,709.0 V720.0 Q801.6,724.0 805.6,724.0 H1080.0 Z" fill="#4a3aa7"/>
+<text x="791.6" y="719.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#0b0b0b" text-anchor="end">-61%</text>
+<path d="M1080.0,726.0 H773.1 Q769.1,726.0 769.1,730.0 V741.0 Q769.1,745.0 773.1,745.0 H1080.0 Z" fill="#eb6834"/>
+<text x="779.1" y="740.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#ffffff" text-anchor="start">-68%</text>
+<text x="722.0" y="770.4" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">+10% to +20%</text>
+<text x="722.0" y="787.4" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="end">n = 48</text>
+<path d="M1080.0,751.4 H975.4 Q971.4,751.4 971.4,755.4 V766.4 Q971.4,770.4 975.4,770.4 H1080.0 Z" fill="#4a3aa7"/>
+<text x="961.4" y="765.4" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#52514e" text-anchor="end">-24%</text>
+<path d="M1080.0,772.4 H1026.2 Q1022.2,772.4 1022.2,776.4 V787.4 Q1022.2,791.4 1026.2,791.4 H1080.0 Z" fill="#eb6834"/>
+<text x="1012.2" y="786.4" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#52514e" text-anchor="end">-13%</text>
+<text x="722.0" y="816.8" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Good &gt; +20%</text>
+<text x="722.0" y="833.8" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="end">n = 37</text>
+<path d="M1080.0,797.8 H1066.2 Q1062.2,797.8 1062.2,801.8 V812.8 Q1062.2,816.8 1066.2,816.8 H1080.0 Z" fill="#4a3aa7"/>
+<text x="1052.2" y="811.8" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#52514e" text-anchor="end">-4%</text>
+<path d="M1080.0,818.8 H1031.4 Q1027.4,818.8 1027.4,822.8 V833.8 Q1027.4,837.8 1031.4,837.8 H1080.0 Z" fill="#eb6834"/>
+<text x="1017.4" y="832.8" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="600" fill="#52514e" text-anchor="end">-12%</text>
+<rect x="64.0" y="938.0" width="1312.0" height="338.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="92.0" y="980.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="17" font-weight="600" fill="#0b0b0b" text-anchor="start">Exposure is not national</text>
+<text x="92.0" y="1006.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Correlation between rainfall anomaly in the critical window and the yield residual, soybean. Rio Grande do Sul is 4 times as sensitive as Mato Grosso — a national average erases this entirely.</text>
+<text x="92.0" y="1025.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Pearson r, 1992–2025.</text>
+<line x1="116.0" y1="1214.0" x2="1344.0" y2="1214.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="106.0" y="1218.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">0.0</text>
+<line x1="116.0" y1="1160.7" x2="1344.0" y2="1160.7" stroke="#e1e0d9" stroke-width="1"/>
+<text x="106.0" y="1164.7" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">0.2</text>
+<line x1="116.0" y1="1107.3" x2="1344.0" y2="1107.3" stroke="#e1e0d9" stroke-width="1"/>
+<text x="106.0" y="1111.3" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">0.4</text>
+<path d="M214.0,1214.0 V1183.9 Q214.0,1179.9 218.0,1179.9 H234.0 Q238.0,1179.9 238.0,1183.9 V1214.0 Z" fill="#4a3aa7" opacity="0.42"/>
+<text x="226.0" y="1167.9" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#898781" text-anchor="middle">0.13</text>
+<text x="226.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">MT</text>
+<path d="M386.0,1214.0 V1177.7 Q386.0,1173.7 390.0,1173.7 H406.0 Q410.0,1173.7 410.0,1177.7 V1214.0 Z" fill="#4a3aa7" opacity="0.42"/>
+<text x="398.0" y="1161.7" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#898781" text-anchor="middle">0.15</text>
+<text x="398.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">GO</text>
+<path d="M558.0,1214.0 V1159.7 Q558.0,1155.7 562.0,1155.7 H578.0 Q582.0,1155.7 582.0,1159.7 V1214.0 Z" fill="#4a3aa7" opacity="0.42"/>
+<text x="570.0" y="1143.7" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#898781" text-anchor="middle">0.22</text>
+<text x="570.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">BA</text>
+<path d="M730.0,1214.0 V1154.7 Q730.0,1150.7 734.0,1150.7 H750.0 Q754.0,1150.7 754.0,1154.7 V1214.0 Z" fill="#4a3aa7" opacity="0.42"/>
+<text x="742.0" y="1138.7" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#898781" text-anchor="middle">0.24</text>
+<text x="742.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">PR</text>
+<path d="M902.0,1214.0 V1124.2 Q902.0,1120.2 906.0,1120.2 H922.0 Q926.0,1120.2 926.0,1124.2 V1214.0 Z" fill="#4a3aa7" opacity="0.42"/>
+<text x="914.0" y="1108.2" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#898781" text-anchor="middle">0.35</text>
+<text x="914.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">MG</text>
+<path d="M1074.0,1214.0 V1113.4 Q1074.0,1109.4 1078.0,1109.4 H1094.0 Q1098.0,1109.4 1098.0,1113.4 V1214.0 Z" fill="#4a3aa7" opacity="0.42"/>
+<text x="1086.0" y="1097.4" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#898781" text-anchor="middle">0.39</text>
+<text x="1086.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">MS</text>
+<path d="M1246.0,1214.0 V1085.6 Q1246.0,1081.6 1250.0,1081.6 H1266.0 Q1270.0,1081.6 1270.0,1085.6 V1214.0 Z" fill="#4a3aa7"/>
+<text x="1258.0" y="1069.6" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="middle">0.50</text>
+<text x="1258.0" y="1238.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#0b0b0b" text-anchor="middle">RS</text>
+<rect x="64.0" y="1316.0" width="1312.0" height="540.0" rx="14" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.1"/>
+<text x="92.0" y="1358.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="17" font-weight="600" fill="#0b0b0b" text-anchor="start">Season by season</text>
+<text x="92.0" y="1381.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">Circled seasons are the ones the model called 10% or more below trend, using only weather and seasons that preceded them.</text>
+<text x="92.0" y="1400.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="start">About 48% of the calls are false alarms, and they are left in on purpose.</text>
+<line x1="92.0" y1="1432.0" x2="108.0" y2="1432.0" stroke="#4a3aa7" stroke-width="2" stroke-linecap="round"/>
+<circle cx="100.0" cy="1432.0" r="4" fill="#4a3aa7"/>
+<text x="116.0" y="1436.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Actual yield</text>
+<line x1="205.5" y1="1432.0" x2="221.5" y2="1432.0" stroke="#898781" stroke-width="2" stroke-linecap="round"/>
+<circle cx="213.5" cy="1432.0" r="4" fill="#898781"/>
+<text x="229.5" y="1436.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Trend (baseline)</text>
+<circle cx="350.7" cy="1432.0" r="7" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<text x="366.7" y="1436.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Model flagged a failure</text>
+<rect x="522.2" y="1426.0" width="12.0" height="12.0" rx="3" fill="#e34948"/>
+<text x="544.2" y="1436.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Drier than normal</text>
+<rect x="669.0" y="1426.0" width="12.0" height="12.0" rx="3" fill="#2a78d6"/>
+<text x="691.0" y="1436.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Wetter</text>
+<rect x="1214.5" y="1342.0" width="133.5" height="32.0" rx="16" fill="#ffffff" stroke="#0b0b0b" stroke-width="1" stroke-opacity="0.12"/>
+<text x="1281.2" y="1363.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="400" fill="#52514e" text-anchor="middle">Rio Grande do Sul</text>
+<rect x="1124.2" y="1342.0" width="80.2" height="32.0" rx="16" fill="#0b0b0b"/>
+<text x="1164.4" y="1363.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">Soybean</text>
+<line x1="152.0" y1="1706.0" x2="1320.0" y2="1706.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="138.0" y="1710.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">0</text>
+<line x1="152.0" y1="1637.4" x2="1320.0" y2="1637.4" stroke="#e1e0d9" stroke-width="1"/>
+<text x="138.0" y="1641.4" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">1,000</text>
+<line x1="152.0" y1="1568.9" x2="1320.0" y2="1568.9" stroke="#e1e0d9" stroke-width="1"/>
+<text x="138.0" y="1572.9" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">2,000</text>
+<line x1="152.0" y1="1500.3" x2="1320.0" y2="1500.3" stroke="#e1e0d9" stroke-width="1"/>
+<text x="138.0" y="1504.3" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="end">3,000</text>
+<text x="138.0" y="1453.1" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="end">kg/ha</text>
+<line x1="152.0" y1="1706.0" x2="1320.0" y2="1706.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="258.2" y="1728.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">2005</text>
+<text x="523.6" y="1728.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">2010</text>
+<text x="789.1" y="1728.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">2015</text>
+<text x="1054.5" y="1728.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">2020</text>
+<text x="1320.0" y="1728.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11.5" font-weight="400" fill="#898781" text-anchor="middle">2025</text>
+<polyline points="152.0,1582.1 205.1,1562.6 258.2,1575.4 311.3,1598.8 364.4,1593.7 417.5,1579.5 470.5,1576.6 523.6,1573.6 576.7,1564.0 629.8,1552.3 682.9,1559.4 736.0,1551.0 789.1,1545.2 842.2,1535.8 895.3,1528.1 948.4,1517.0 1001.5,1509.1 1054.5,1500.7 1107.6,1507.0 1160.7,1498.9 1213.8,1507.7 1266.9,1511.0 1320.0,1506.1" fill="none" stroke="#898781" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="152.0,1522.2 205.1,1610.0 258.2,1658.1 311.3,1571.6 364.4,1531.1 417.5,1566.9 470.5,1564.1 523.6,1529.8 576.7,1510.9 629.8,1599.4 682.9,1519.9 736.0,1527.4 789.1,1500.9 842.2,1502.3 895.3,1474.1 948.4,1484.6 1001.5,1474.3 1054.5,1573.0 1107.6,1470.6 1160.7,1593.5 1213.8,1556.9 1266.9,1492.3 1320.0,1545.4" fill="none" stroke="#4a3aa7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="152.0" cy="1522.2" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="205.1" cy="1610.0" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="205.1" cy="1610.0" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="258.2" cy="1658.1" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="258.2" cy="1658.1" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="311.3" cy="1571.6" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="311.3" cy="1571.6" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="364.4" cy="1531.1" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="364.4" cy="1531.1" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="417.5" cy="1566.9" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="470.5" cy="1564.1" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="470.5" cy="1564.1" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="523.6" cy="1529.8" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="576.7" cy="1510.9" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="629.8" cy="1599.4" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="629.8" cy="1599.4" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="682.9" cy="1519.9" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="736.0" cy="1527.4" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="789.1" cy="1500.9" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="842.2" cy="1502.3" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="895.3" cy="1474.1" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="948.4" cy="1484.6" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="948.4" cy="1484.6" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1001.5" cy="1474.3" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1054.5" cy="1573.0" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="1054.5" cy="1573.0" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1107.6" cy="1470.6" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1160.7" cy="1593.5" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="1160.7" cy="1593.5" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1213.8" cy="1556.9" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="1213.8" cy="1556.9" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1266.9" cy="1492.3" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="1266.9" cy="1492.3" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="1320.0" cy="1545.4" r="10" fill="none" stroke="#eb6834" stroke-width="2.5"/>
+<circle cx="1320.0" cy="1545.4" r="4.5" fill="#4a3aa7" stroke="#fcfcfb" stroke-width="2"/>
+<text x="152.0" y="1748.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">Dry-day anomaly in the critical window, in standard deviations — the input the model actually reads</text>
+<text x="138.0" y="1776.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#898781" text-anchor="end">drier</text>
+<text x="138.0" y="1838.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="10.5" font-weight="400" fill="#898781" text-anchor="end">wetter</text>
+<line x1="152.0" y1="1804.0" x2="1320.0" y2="1804.0" stroke="#c3c2b7" stroke-width="1"/>
+<path d="M145.0,1804.0 V1809.6 Q145.0,1813.6 149.0,1813.6 H155.0 Q159.0,1813.6 159.0,1809.6 V1804.0 Z" fill="#2a78d6"/>
+<path d="M198.1,1804.0 V1792.5 Q198.1,1788.5 202.1,1788.5 H208.1 Q212.1,1788.5 212.1,1792.5 V1804.0 Z" fill="#e34948"/>
+<path d="M251.2,1804.0 V1781.3 Q251.2,1777.3 255.2,1777.3 H261.2 Q265.2,1777.3 265.2,1781.3 V1804.0 Z" fill="#e34948"/>
+<path d="M304.3,1804.0 V1800.7 Q304.3,1796.7 308.3,1796.7 H314.3 Q318.3,1796.7 318.3,1800.7 V1804.0 Z" fill="#e34948"/>
+<path d="M357.4,1804.0 V1801.0 Q357.4,1805.0 361.4,1805.0 H367.4 Q371.4,1805.0 371.4,1801.0 V1804.0 Z" fill="#2a78d6"/>
+<path d="M410.5,1804.0 V1792.7 Q410.5,1788.7 414.5,1788.7 H420.5 Q424.5,1788.7 424.5,1792.7 V1804.0 Z" fill="#e34948"/>
+<path d="M463.5,1804.0 V1793.2 Q463.5,1789.2 467.5,1789.2 H473.5 Q477.5,1789.2 477.5,1793.2 V1804.0 Z" fill="#e34948"/>
+<path d="M516.6,1804.0 V1804.2 Q516.6,1800.2 520.6,1800.2 H526.6 Q530.6,1800.2 530.6,1804.2 V1804.0 Z" fill="#e34948"/>
+<path d="M569.7,1804.0 V1811.7 Q569.7,1815.7 573.7,1815.7 H579.7 Q583.7,1815.7 583.7,1811.7 V1804.0 Z" fill="#2a78d6"/>
+<path d="M622.8,1804.0 V1780.0 Q622.8,1776.0 626.8,1776.0 H632.8 Q636.8,1776.0 636.8,1780.0 V1804.0 Z" fill="#e34948"/>
+<path d="M675.9,1804.0 V1790.4 Q675.9,1786.4 679.9,1786.4 H685.9 Q689.9,1786.4 689.9,1790.4 V1804.0 Z" fill="#e34948"/>
+<path d="M729.0,1804.0 V1807.2 Q729.0,1803.2 733.0,1803.2 H739.0 Q743.0,1803.2 743.0,1807.2 V1804.0 Z" fill="#e34948"/>
+<path d="M782.1,1804.0 V1803.4 Q782.1,1799.4 786.1,1799.4 H792.1 Q796.1,1799.4 796.1,1803.4 V1804.0 Z" fill="#e34948"/>
+<path d="M835.2,1804.0 V1801.9 Q835.2,1805.9 839.2,1805.9 H845.2 Q849.2,1805.9 849.2,1801.9 V1804.0 Z" fill="#2a78d6"/>
+<path d="M888.3,1804.0 V1810.0 Q888.3,1814.0 892.3,1814.0 H898.3 Q902.3,1814.0 902.3,1810.0 V1804.0 Z" fill="#2a78d6"/>
+<path d="M941.4,1804.0 V1797.0 Q941.4,1793.0 945.4,1793.0 H951.4 Q955.4,1793.0 955.4,1797.0 V1804.0 Z" fill="#e34948"/>
+<path d="M994.5,1804.0 V1806.8 Q994.5,1802.8 998.5,1802.8 H1004.5 Q1008.5,1802.8 1008.5,1806.8 V1804.0 Z" fill="#e34948"/>
+<path d="M1047.5,1804.0 V1769.9 Q1047.5,1765.9 1051.5,1765.9 H1057.5 Q1061.5,1765.9 1061.5,1769.9 V1804.0 Z" fill="#e34948"/>
+<path d="M1100.6,1804.0 V1806.4 Q1100.6,1802.4 1104.6,1802.4 H1110.6 Q1114.6,1802.4 1114.6,1806.4 V1804.0 Z" fill="#e34948"/>
+<path d="M1153.7,1804.0 V1803.2 Q1153.7,1799.2 1157.7,1799.2 H1163.7 Q1167.7,1799.2 1167.7,1803.2 V1804.0 Z" fill="#e34948"/>
+<path d="M1206.8,1804.0 V1789.4 Q1206.8,1785.4 1210.8,1785.4 H1216.8 Q1220.8,1785.4 1220.8,1789.4 V1804.0 Z" fill="#e34948"/>
+<path d="M1313.0,1804.0 V1788.8 Q1313.0,1784.8 1317.0,1784.8 H1323.0 Q1327.0,1784.8 1327.0,1788.8 V1804.0 Z" fill="#e34948"/>
+<rect x="0.0" y="1896.0" width="1440.0" height="132.0" rx="0" fill="#12120f"/>
+<text x="64.0" y="1938.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="11" font-weight="600" fill="#8f8e88" text-anchor="start" letter-spacing="1.4">PIPELINE</text>
+<rect x="64.0" y="1956.0" width="198.0" height="36.0" rx="18" fill="#1e1e1a" stroke="#ffffff" stroke-width="1" stroke-opacity="0.1"/>
+<text x="163.0" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="middle">CONAB · IBGE · NASA POWER</text>
+<line x1="270.0" y1="1974.0" x2="284.0" y2="1974.0" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M280.0,1970.0 L285.0,1974.0 L280.0,1978.0" fill="none" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="292.0" y="1956.0" width="126.5" height="36.0" rx="18" fill="#1e1e1a" stroke="#ffffff" stroke-width="1" stroke-opacity="0.1"/>
+<text x="355.2" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="middle">Python ingestion</text>
+<line x1="426.5" y1="1974.0" x2="440.5" y2="1974.0" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M436.5,1970.0 L441.5,1974.0 L436.5,1978.0" fill="none" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="448.5" y="1956.0" width="206.0" height="36.0" rx="18" fill="#1e1e1a" stroke="#ffffff" stroke-width="1" stroke-opacity="0.1"/>
+<text x="551.5" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="middle">DuckDB (dev) · BigQuery (prod)</text>
+<line x1="662.5" y1="1974.0" x2="676.5" y2="1974.0" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M672.5,1970.0 L677.5,1974.0 L672.5,1978.0" fill="none" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="684.5" y="1956.0" width="105.0" height="36.0" rx="18" fill="#1e1e1a" stroke="#ffffff" stroke-width="1" stroke-opacity="0.1"/>
+<text x="737.0" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="middle">dbt · 78 tests</text>
+<line x1="797.5" y1="1974.0" x2="811.5" y2="1974.0" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M807.5,1970.0 L812.5,1974.0 L807.5,1978.0" fill="none" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="819.5" y="1956.0" width="93.5" height="36.0" rx="18" fill="#1e1e1a" stroke="#ffffff" stroke-width="1" stroke-opacity="0.1"/>
+<text x="866.2" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="middle">scikit-learn</text>
+<line x1="921.0" y1="1974.0" x2="935.0" y2="1974.0" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M931.0,1970.0 L936.0,1974.0 L931.0,1978.0" fill="none" stroke="#5a5954" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="943.0" y="1956.0" width="83.0" height="36.0" rx="18" fill="#1e1e1a" stroke="#ffffff" stroke-width="1" stroke-opacity="0.1"/>
+<text x="984.5" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="middle">Streamlit</text>
+<text x="1376.0" y="1979.0" font-family="Segoe UI, system-ui, -apple-system, Helvetica, sans-serif" font-size="12.5" font-weight="400" fill="#8f8e88" text-anchor="end">Built by Caio Goia</text>
+</svg>

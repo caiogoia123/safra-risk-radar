@@ -24,7 +24,7 @@ DATA_DIR = Path(__file__).parent / "data"
 
 EXPECTED_COLUMNS = {
     "season_risk": {"crop_name", "state_code", "harvest_year", "precipitation_anomaly_z",
-                    "yield_residual_pct", "max_dry_spell_days"},
+                    "yield_residual_pct", "max_dry_spell_days", "dry_days_anomaly_z"},
     "backtest": {"crop_name", "state_code", "harvest_year", "role", "predicted_pct",
                  "actual_pct", "trend_kg_ha", "yield_kg_ha"},
     "forecast": {"crop_name", "state_code", "janela_coberta_pct", "tendencia_kg_ha",
@@ -79,11 +79,18 @@ def main() -> int:
             print(f"FAIL: pivoting backtest lost the '{role}' column")
             return 1
 
-    # Every crop x state pair the selectors can reach must produce a figure.
+    # Every crop x state pair the selectors can reach must produce a figure --
+    # with the weather panel too, which reads a different CSV than the yield
+    # lines above it. A pair present in backtest.csv and absent from
+    # season_risk.csv would take the page down only for whoever picked it.
     for crop in wide["crop_name"].unique():
         for state in wide[wide["crop_name"] == crop]["state_code"].unique():
             series = wide[(wide["crop_name"] == crop) & (wide["state_code"] == state)]
-            c.season_chart(series).to_dict()
+            anomaly = c.anomaly_series(frames["season_risk"], crop, state)
+            if anomaly.empty:
+                print(f"FAIL: no weather anomaly for {crop} in {state}")
+                return 1
+            c.season_chart(series, anomaly).to_dict()
     print(f"ok   season chart renders for all {wide.groupby('crop_name')['state_code'].nunique().sum()} crop/state pairs")
 
     c.severity_chart(c.severity_gains(wide)).to_dict()

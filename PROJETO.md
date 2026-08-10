@@ -955,3 +955,38 @@ dbt e quatro correções, todas da mesma família — **valor derivável escrito
 da safra corrente, três frases do app e o teto de um eixo estavam digitados, num projeto cujo CI
 roda sozinho toda semana. O padrão para a próxima vez: em código que se atualiza sem supervisão,
 **qualquer constante que descreva o dado é um bug com data marcada**.
+
+**10/08/2026 — sessão 9 (trabalho): redesenho da página**
+
+O visual foi decidido em mockup antes de tocar no app. `design/` guarda as duas versões
+(`app-redesign-v2.svg` e `app-redesign-v3.svg`) e os scripts que as geram **a partir dos CSVs de
+`app/data`** — o mockup não inventa número sobre o próprio projeto, e reroda junto com os dados.
+A v3 é a que foi implementada; a v2 fica para comparação. `design/README.md` tem o mapa completo.
+
+**A cor foi medida, não escolhida.** O azul + laranja saiu porque o Caio não gostou; o substituto
+foi decidido rodando o validador da paleta (ΔE em OKLab, simulação Machado-Oliveira-Fernandes)
+sobre seis candidatos pareados com o laranja. Violeta `#4a3aa7` ganhou com **ΔE 29,5 sob CVD**
+contra 9,2 do aqua e 9,1 do azul que saiu (o piso é 8), e é o único que também limpa o contraste
+sem ressalva. Azul e vermelho seguem na página **só como par divergente** (seco/úmido), onde a cor
+marca polaridade e não identidade de série. O validador é JS e não há Node aqui: foi portado para
+Python e conferido contra os números que a própria paleta documenta (9,1/19,6 light e 8,4/19,3
+dark) antes de decidir qualquer coisa.
+
+**Segunda safra de literais quantitativos, da mesma família da auditoria de 07/08.** Auditado o
+app inteiro: 16 afirmações numéricas estavam digitadas. Todas passaram a ser calculadas — recall,
+ganho na cauda, nº e intervalo de safras, linhas de clima, safra aberta, estados pontuados, razão
+de exposição, skill por cultura, precisão, taxa de falso alarme, rótulos das faixas de severidade
+e os tetos dos três eixos. Uma delas **estava errada há tempo indeterminado**: a página afirmava
+que as safras normais eram 55% da amostra, e o dado diz 48,1%. Restaram fixos, por não existirem
+em CSV nenhum: `GRID_CELLS = 255` (a coluna `grid_cells` é por UF e somar dá dobro) e a contagem
+de testes dbt, que saiu do rodapé. Para derivá-los, teriam de entrar no `meta.json`.
+
+Também nesta sessão: limiares `FLAG_PCT`/`FAIL_PCT` centralizados em `charts.py` (estavam em
+quatro lugares, texto e filtro separados), `use_container_width` trocado pelo `width` novo, e o
+`selftest` agora renderiza o painel climático de **cada** par cultura×UF — o painel lê
+`season_risk` e não `backtest`, então um par presente num CSV e ausente do outro derrubaria a
+página só para quem escolhesse aquele par.
+
+Armadilha de CSS que custou uma rodada: o Streamlit estiliza `.stMarkdown p`, que tem
+especificidade maior que uma classe solta. A manchete saiu com o corpo de texto comum até os
+seletores virarem `p.srr-head`. **Classe solta não vence o CSS do Streamlit.**
