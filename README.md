@@ -3,6 +3,9 @@
 **[→ Live dashboard](https://safra-risk-radar.streamlit.app)** · rebuilt weekly by CI, from
 CONAB, IBGE and NASA POWER through dbt into BigQuery.
 
+<sub>Hosted on Streamlit's free tier, which sleeps an app after a stretch of no visitors. If you
+land on a "Zzzz" screen, the button on it wakes the app in about half a minute.</sub>
+
 **How much of the year-to-year swing in Brazilian soybean and second-crop corn yield is
 explained by weather in each crop's critical window — and can a shortfall be called before the
 official survey closes?**

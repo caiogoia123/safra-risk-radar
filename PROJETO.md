@@ -329,6 +329,30 @@ Community Cloud (avatar do criador, status) e o app vive num iframe — ler o DO
 vazia e parece app quebrado. `https://safra-risk-radar.streamlit.app/~/+/_stcore/health` responde
 `ok` e é a checagem rápida de que o servidor está de pé.
 
+### ⚠️ O app hiberna por inatividade — e o health endpoint não impede isso
+Em 10/08 o link abriu na tela "**Zzzz — This app has gone to sleep due to inactivity**", com um
+botão que acorda em ~30 s. É comportamento normal do plano gratuito do Community Cloud, não erro
+de deploy. Mas para um link de portfólio é um problema de verdade: parte de quem clicar vai ver
+uma tela de app dormindo em vez do dashboard.
+
+Medido no mesmo momento, com o app hibernado:
+
+| Estado | `/~/+/_stcore/health` |
+|---|---|
+| No ar | `200` + corpo `ok` |
+| Hibernado | **`400`**, corpo vazio |
+
+Duas conclusões, e a segunda derruba a saída óbvia:
+- **Serve como monitor** — dá para distinguir no ar de hibernado por código de status.
+- **NÃO serve como keep-alive.** A requisição voltou 400 **sem acordar o app**. Um cron pingando
+  esse endereço não manteria nada de pé; só tráfego real de página conta, e a tela de "Zzzz" exige
+  o clique no botão. Um keep-alive de verdade precisaria de navegador headless no CI — custo alto
+  para o benefício.
+
+**O que fazer na prática:** acordar o app manualmente pouco antes de publicar o post. O tráfego do
+próprio post o mantém acordado enquanto houver visita. E deixar isso dito no README, para que quem
+chegar semanas depois entenda a tela em vez de achar que o projeto quebrou.
+
 
 `app/streamlit_app.py` (layout e texto) + `app/charts.py` (figuras e transformações, sem
 Streamlit — dá para renderizar e **olhar** os gráficos fora do app, que foi como os problemas
