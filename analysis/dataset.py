@@ -19,11 +19,6 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "data" / "dev.duckdb"
 
-# CONAB's most recent season is a survey estimate, not a realised number, so it
-# is never a training target and never scored. It is forecast at the very end,
-# which is the actual use case.
-CURRENT_SEASON = 2026
-
 WEATHER_COLUMNS = [
     "precipitation_mm",
     "dry_days",
@@ -31,6 +26,18 @@ WEATHER_COLUMNS = [
     "growing_degree_days",
     "max_dry_spell_days",
 ]
+
+
+def current_season(panel: pd.DataFrame) -> int:
+    """The newest season CONAB carries, which is always its open survey estimate.
+
+    Read from the data rather than written down. A constant here would have gone
+    stale the moment CONAB opened the next survey, and nothing would have said
+    so: the weekly refresh would keep forecasting a season that had meanwhile
+    been realised, and the dashboard would keep calling it "not closed yet".
+    Same failure the hardcoded weather cutoff already caused once.
+    """
+    return int(panel["harvest_year"].max())
 
 
 def load_panel(db_path: Path | str = DB_PATH) -> pd.DataFrame:
@@ -54,7 +61,7 @@ def load_panel(db_path: Path | str = DB_PATH) -> pd.DataFrame:
     # A state with no yield for a season cannot train or score. Weather alone is
     # still useful for forecasting the current season, so drop only where the
     # target is missing and the season is historical.
-    historical = panel["harvest_year"] < CURRENT_SEASON
+    historical = panel["harvest_year"] < current_season(panel)
     panel = panel[~(historical & panel["yield_kg_ha"].isna())].reset_index(drop=True)
     return panel
 

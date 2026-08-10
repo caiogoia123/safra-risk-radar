@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: fct_season_risk
+    description: >
+      One row per crop x state x season: critical-window weather, how far it sits
+      from that state's normal, and the yield that came out of it. This is the
+      table the model trains on and the dashboard ships.
+
+      The trend here is fitted over the whole series, so it is in-sample: fine
+      for describing the record, wrong for scoring a forecast. The backtest
+      refits trend, normals and model on training seasons only.
+    columns:
+      - name: crop_name
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["SOJA", "MILHO 2A SAFRA"]
+      - name: state_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BA", "GO", "MG", "MS", "MT", "PR", "RS"]
+      - name: harvest_year
+        tests:
+          - not_null
+      - name: grid_cells
+        tests:
+          - not_null
+      - name: days_in_window
+        description: >
+          Days of weather actually found inside the window. Below the historical
+          length it means the series is truncated, not that the season was short:
+          the forecast refuses any window under 95% covered, because a missing
+          month reads to the model as an extreme drought.
+        tests:
+          - not_null
+
+      # Weather and anomalies are never null: every state x season reaching this
+      # table has weather by construction, and the normals cover 1992-2020 for
+      # every crop x state pair.
+      - name: precipitation_mm
+        tests:
+          - not_null
+      - name: precipitation_anomaly_z
+        tests:
+          - not_null
+      - name: dry_days
+        tests:
+          - not_null
+      - name: dry_days_anomaly_z
+        tests:
+          - not_null
+      - name: temp_mean_c
+        tests:
+          - not_null
+      - name: temp_anomaly_z
+        tests:
+          - not_null
+      - name: growing_degree_days
+        tests:
+          - not_null
+
+      # Deliberately untested for null: CONAB has no published yield for seven
+      # state x season pairs, which is missing data rather than a defect. The
+      # loader drops them for historical seasons and keeps them for the current
+      # one, where the yield is the thing being forecast.
+      - name: yield_kg_ha
+        description: Null where CONAB published no yield for that state and season.
+      - name: yield_residual_pct
+        description: >
+          WARNING, and the name is the trap: this is a *fraction*, not a
+          percentage - -0.51 means 51% below trend. The backtest and the exported
+          backtest.csv use `actual_pct`, which is a real percentage on the same
+          quantity. Anything comparing the two directly is off by 100x. Only
+          correlations touch this column today, and those are scale-invariant.

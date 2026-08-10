@@ -39,11 +39,16 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Extract and load into DuckDB
-        # A clean runner has no raw cache, so this always fetches fresh: CONAB,
-        # IBGE PAM, municipal centroids, then one NASA POWER request per grid
-        # cell -- 255 of them, and the long pole of the whole workflow. POWER
-        # throttles datacenter IPs, so the first attempt at this ran past 59
-        # minutes and was killed; the cells are now fetched five at a time.
+        # A clean runner has no raw cache, so this fetches CONAB fresh and then
+        # makes one NASA POWER request per grid cell -- 255 of them, and the long
+        # pole of the whole workflow. POWER throttles datacenter IPs, so the
+        # first attempt at this ran past 59 minutes and was killed; the cells are
+        # now fetched five at a time.
+        #
+        # The municipal PAM table and the hub centroids are NOT downloaded here:
+        # both IBGE APIs refuse datacenter IPs, and both datasets are static, so
+        # they are versioned under ingestion/reference/ and regenerated on
+        # purpose. That is what took the run from 59 minutes to under four.
         #
         # -u because without it Python block-buffers stdout when it is not a
         # terminal: the progress lines sit in the buffer for the whole run, and

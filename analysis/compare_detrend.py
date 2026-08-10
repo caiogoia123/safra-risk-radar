@@ -12,14 +12,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from analysis.dataset import CURRENT_SEASON, load_panel, series_key
+from analysis.dataset import current_season, load_panel, series_key
 from analysis.trend import MIN_TRAIN_SEASONS, TRENDS, predict_trend
 
 
 def walk_forward_trend_errors(panel: pd.DataFrame) -> pd.DataFrame:
     """Percent error of each trend shape, one row per series x season x shape."""
     rows = []
-    panel = panel[panel["harvest_year"] < CURRENT_SEASON]
+    panel = panel[panel["harvest_year"] < current_season(panel)]
 
     for (crop, state), series in panel.groupby(["crop_name", "state_code"]):
         series = series.sort_values("harvest_year")

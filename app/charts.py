@@ -62,9 +62,17 @@ def severity_gains(wide: pd.DataFrame) -> pd.DataFrame:
 
 
 def state_exposure(season_risk: pd.DataFrame, crop: str = "SOJA") -> pd.Series:
-    """How tightly each state's yield residual tracks its rainfall anomaly."""
+    """How tightly each state's yield residual tracks its rainfall anomaly.
+
+    The newest season is excluded because its yield is CONAB's open survey
+    estimate, not a realised harvest, and it has no business inside a
+    correlation over the record. The cutoff is read from the data: written down,
+    it would silently freeze this chart at whatever year was current the day it
+    was typed, and never take in a season once that season closed.
+    """
+    latest = season_risk["harvest_year"].max()
     subset = season_risk[(season_risk["crop_name"] == crop)
-                         & (season_risk["harvest_year"] <= 2025)]
+                         & (season_risk["harvest_year"] < latest)]
     return (
         subset.groupby("state_code")
         .apply(lambda g: g["precipitation_anomaly_z"].corr(g["yield_residual_pct"]),
@@ -132,13 +140,23 @@ def severity_chart(gains: pd.DataFrame, height: int = 360) -> go.Figure:
 
 
 def exposure_chart(exposure: pd.Series, height: int = 360) -> go.Figure:
-    """One series, one color -- bar length already encodes the magnitude."""
+    """One series, one color -- bar length already encodes the magnitude.
+
+    The axis keeps zero as an edge, because these bars are read against zero,
+    but it stretches to fit the data instead of stopping at a number typed once.
+    A fixed ceiling clips a bar that outgrows it, and the chart still renders --
+    it just quietly understates the very state it is meant to single out. The
+    floor drops below zero only if a correlation ever turns negative, which
+    would otherwise be a bar of length zero and invisible.
+    """
+    low = min(0.0, float(exposure.min()) * 1.15)
+    high = max(0.6, float(exposure.max()) * 1.15)
     fig = go.Figure(go.Bar(
         x=exposure.values, y=exposure.index, orientation="h",
         marker=dict(color=BLUE, line=dict(width=0), cornerradius=4), width=0.45,
         hovertemplate="<b>%{y}</b><br>Correlation: %{x:.2f}<extra></extra>",
     ))
-    fig.update_xaxes(showgrid=True, gridcolor=GRID, range=[0, 0.6], ticksuffix="")
+    fig.update_xaxes(showgrid=True, gridcolor=GRID, range=[low, high], ticksuffix="")
     fig.update_yaxes(showgrid=False)
     return _style(fig, height)
 

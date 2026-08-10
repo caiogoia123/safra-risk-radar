@@ -143,12 +143,12 @@ somar**, ou ponderar por produção dividindo pelo peso total. Nunca `sum()` cru
 
 | Semana | Entrega | Feito? |
 |---|---|---|
-| 1 | Repo, ingestão CONAB + PAM + POWER, camada raw | parcial — CONAB pronta, PAM e POWER faltando |
-| 2 | dbt staging + intermediate (normais climatológicas, janelas) | parcial — projeto dbt de pé, `stg_conab_grain` rodando |
+| 1 | Repo, ingestão CONAB + PAM + POWER, camada raw | ✅ |
+| 2 | dbt staging + intermediate (normais climatológicas, janelas) | ✅ |
 | 3 | Marts + testes dbt + análise exploratória (achar o insight) | ✅ |
 | 4 | Modelo, backtest temporal, comparação com baseline | ✅ |
 | 5 | Streamlit publicado + GitHub Actions agendado + target BigQuery | ✅ CI verde (3m34s); **app no ar em 07/08** |
-| 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | |
+| 6 | README em inglês liderado pelo achado, diagrama, post no LinkedIn | README ✅ 07/08 — **falta só o post** |
 
 ## 8. Como rodar
 
@@ -496,6 +496,75 @@ O seed entrou em 04/08 às 10:44, depois do último `build --target prod` da ses
 dias verde porque o CI só exercitava o DuckDB. Se algum dia o prod voltar a ficar mudo, é sinal de
 alerta, não de calmaria.
 
+### ✅ Auditoria geral antes do post (07/08) — 22 → 78 testes e 4 correções
+
+**Testes dbt (a dívida que estava aberta).** Criados `_models.yml` nas três camadas e cinco testes
+singulares em `dbt/tests/`. **85/85 verde no dev e no prod.** Escolha deliberada: **nada de
+`dbt_utils`** — ele daria unicidade de chave composta de graça, mas custaria um `packages.yml` e um
+passo `dbt deps` nos dois workflows. As duas chaves compostas viraram teste singular escrito à mão.
+
+Os testes que valem por si:
+- `assert_weather_is_aggregated_over_distinct_cells` — guarda a armadilha do fan-out, o erro mais
+  caro do projeto (5.350 mm/ano no PR contra ~1.620 reais). Se `grid_cells` passar do número de
+  células distintas da UF, algum join voltou a multiplicar linhas.
+- `assert_worst_cell_dry_spell_is_not_below_the_mean` — com tolerância de 1e-3, **não** por o
+  invariante ser fraco: quando todas as células têm o mesmo veranico, `sum(x*w)/sum(w)` cai 1,4e-14
+  abaixo do próprio máximo em 2 linhas. Comparação estrita falharia nelas; erro real de ponderação
+  seria de ordens de grandeza maior.
+- `assert_dry_days_fit_inside_the_window` — trivial e pega a classe de bug em que a contagem de dias
+  secos e o tamanho da janela deixam de ser medidos sobre as mesmas linhas.
+
+**⚠️ Ano fixo no código de um projeto que se atualiza sozinho.** `CURRENT_SEASON = 2026` estava
+escrito em `analysis/dataset.py`. O refresh semanal roda para sempre: quando a CONAB abrir a safra
+2026/27, o backtest continuaria parando em 2025 e o app continuaria chamando 2026 de "safra não
+fechada" — já realizada. Virou `current_season(panel)`, lido do `max(harvest_year)`. Mesma correção
+em `compare_detrend.py`.
+
+**⚠️ O mesmo bug, três vezes, no texto do app.** `"1992 to 2026"`, `"2025/26"`, `"2003–2025"` e
+`"3.3M"` estavam digitados na cópia — exatamente a falha que o `meta.json` foi criado para resolver
+em 07/08 de manhã, repetida em outros quatro lugares. Todos derivados agora; `meta.json` ganhou
+`weather_from` e `weather_rows`, e o `selftest` valida os três campos um a um (dizer só "meta.json
+quebrado" não diz qual linha de texto consertar).
+
+**⚠️ `state_exposure` filtrava `harvest_year <= 2025`.** A intenção era tirar a safra em aberto da
+correlação; o efeito era **congelar o gráfico em 2025 para sempre** — 2026 nunca entraria nem depois
+de fechar. Agora exclui a safra mais recente, lida do dado.
+
+**⚠️ Eixo do gráfico de exposição fixo em `[0, 0.6]`.** O máximo hoje é 0,496 (RS). Uma correlação
+que passasse de 0,6 seria cortada e o gráfico **renderizaria mesmo assim**, subestimando em silêncio
+justamente o estado que ele existe para destacar. Passou a esticar com o dado, com zero ancorado.
+
+**Achado que ficou registrado em vez de corrigido:** `yield_residual_pct` no mart é uma **fração**
+(-0,67 a 1,95), não percentual, enquanto `actual_pct` no backtest é percentual de verdade. Quem
+comparar os dois erra por 100x. Hoje só correlação toca essa coluna, e correlação é invariante a
+escala — então o risco é futuro, não presente. Renomear mexeria no CSV publicado, no app e no
+selftest; ficou documentado na `description` do `_models.yml` com o aviso explícito. **Decisão do
+Caio se vira rename.**
+
+**Validação:** `dbt build` 85/85 nos dois targets, `selftest` verde, e os três CSVs exportados
+**byte-idênticos** aos commitados — o refactor do ano não mudou um número sequer. Só `meta.json`
+mudou, com as duas chaves novas.
+
+### ⚠️ O refresh do bot chegou no meio da auditoria — e as duas resoluções óbvias quebravam
+Na hora do push, o remoto tinha um `Refresh dashboard data` do runner com clima até **03/08**,
+três dias mais novo que o local, e com `meta.json` **sem as chaves novas**. As duas saídas
+intuitivas do conflito eram armadilhas opostas:
+
+- ficar com o `meta.json` **deles** → o app publicado quebra na hora, porque o código novo lê
+  `weather_rows` e a chave não existiria;
+- ficar com o **nosso** → app funciona anunciando clima até 31/07 enquanto os CSVs já têm 03/08,
+  que é a mesma incoerência que a sessão inteira serviu para eliminar.
+
+Resolvido reingerindo local antes de qualquer merge. A janela do POWER é `hoje - 7`, então em 10/08
+ela dá exatamente 03/08 — a mesma do runner — e **os três CSVs saíram idênticos aos que ele tinha
+commitado**, sobrando só o `meta.json` com as 2 linhas novas. Com isso o conflito evaporou: bastou
+`git reset --soft origin/main` e um commit só, sem rebase.
+
+**A regra que fica:** quando o schema de um artefato commitado muda (aqui, chaves novas no
+`meta.json`), o job automático que também escreve esse artefato vira parte do conflito. Reingerir
+antes de resolver é mais barato que escolher lado — e é a única saída que não deixa o dado e a
+cópia discordando.
+
 ### O caminho até aqui: o IBGE saiu inteiro do caminho crítico do CI
 Depois dos centroides, o run seguinte morreu no **PAM**: as 14 requisições ao
 `apisidra.ibge.gov.br` falharam, todas as 4 tentativas, com `ConnectTimeout` imediato. Os dois
@@ -617,15 +686,16 @@ não reclama de arquivo ignorado, ele simplesmente não adiciona.
    `dbt build --target prod` **29/29 verde**, rodado da máquina local. Com isso o relógio dos 60
    dias zerou: **a pendência com prazo (03/10/2026) deixou de existir.** Falta só ver o
    `refresh.yml` fazer o mesmo sozinho no runner.
-2. README final liderado pelo achado + post no LinkedIn. **Incluir a URL do app** — hoje o README
-   cita "Streamlit app" no diagrama mas não tem link nenhum para o dashboard no ar.
+2. ~~README final~~ — **feito em 07/08**, liderado pelo achado e com a URL do app na primeira
+   linha. **Falta o post no LinkedIn**, que é o único item que ainda separa "projeto pronto" de
+   "portfólio funcionando".
 3. *(Opcional, alto valor)* **Janela parcial** — prever com o clima até janeiro em vez da janela
    fechada, medindo quanto de precisão se perde por mês de antecedência ganho. Vira o gráfico
    mais forte do dashboard. Exige um modelo dbt de clima acumulado por mês da janela e normais
    parciais correspondentes (ver a armadilha acima).
 
-Dívida pequena, quando for mexer no dbt de novo: os modelos não têm `_models.yml` — os 22 testes
-atuais são todos de source e de seed. As colunas do mart não têm teste nenhum.
+~~Dívida pequena: os modelos não têm `_models.yml`~~ — **quitada em 07/08**: 22 → 78 testes, verdes
+nos dois targets. Ver a seção de auditoria abaixo.
 
 ### Git
 Tudo commitado e no GitHub até `129f849` (07/08/2026), CI verde. **O Caio faz todos os commits** —
@@ -854,3 +924,10 @@ cada, contra ~12 min por tentativa se fosse pelo CI. Custo ~1 GB dos 1 TB mensai
 A suposição derrubada vale além deste projeto: **`dbt compile` prova Jinja, não portabilidade** —
 tipo, função e cláusula só são recusados na execução. E o corolário: **um target que não roda não
 está testado**, por mais verde que o CI esteja.
+
+Na mesma sessão, README reescrito liderando pelo achado (detector de quebra, não previsor de safra)
+com a URL do app na primeira linha, e **auditoria geral** antes do post do LinkedIn: 22 → 78 testes
+dbt e quatro correções, todas da mesma família — **valor derivável escrito à mão no código**. O ano
+da safra corrente, três frases do app e o teto de um eixo estavam digitados, num projeto cujo CI
+roda sozinho toda semana. O padrão para a próxima vez: em código que se atualiza sem supervisão,
+**qualquer constante que descreva o dado é um bug com data marcada**.

@@ -55,14 +55,27 @@ def long_date(value: date) -> str:
 season_risk = load("season_risk")
 backtest = widen(load("backtest"))
 forecast = load("forecast")
-weather_through = date.fromisoformat(load_meta()["weather_through"])
+meta = load_meta()
+weather_through = date.fromisoformat(meta["weather_through"])
+
+# Every year this page states is derived, never typed. The one time a date was
+# written into the copy it went stale on the first scheduled refresh, and the
+# published app spent a week misreporting its own coverage.
+first_season = int(season_risk["harvest_year"].min())
+open_season = int(season_risk["harvest_year"].max())   # CONAB's survey, not a harvest
+n_states = season_risk["state_code"].nunique()
+first_scored = int(backtest["harvest_year"].min())
+last_scored = int(backtest["harvest_year"].max())
+# Harvest year 2026 is the 2025/26 season, the way CONAB labels it.
+open_season_label = f"{open_season - 1}/{str(open_season)[2:]}"
 
 # ----------------------------------------------------------------------- header
 
 st.title("Safra Risk Radar")
 st.markdown(
     "#### Climate stress in the critical window, measured against what Brazilian "
-    "soybean and safrinha corn actually yielded — 1992 to 2026, seven states."
+    f"soybean and safrinha corn actually yielded — {first_season} to {open_season}, "
+    f"{n_states} states."
 )
 st.markdown(
     f"<p style='color:{INK_SOFT};font-size:1.05rem;max-width:62rem'>"
@@ -90,10 +103,11 @@ a.metric("Crop failures flagged in advance", f"{len(called) / len(failures) * 10
 b.metric("Error removed on failed seasons", f"{soy_gain:.0f}%",
          help="Soybean seasons more than 20% below trend, RMSE against the baseline.")
 c.metric("Seasons backtested", f"{backtest['harvest_year'].nunique()}",
-         help="2003–2025, walk-forward: trend, climate normals and model refitted "
-              "on past seasons only.")
-d.metric("Daily weather rows", "3.3M",
-         help="NASA POWER, 255 grid cells over the producing municipalities, 1991 onward.")
+         help=f"{first_scored}–{last_scored}, walk-forward: trend, climate normals and "
+              "model refitted on past seasons only.")
+d.metric("Daily weather rows", f"{meta['weather_rows'] / 1e6:.1f}M",
+         help="NASA POWER, 255 grid cells over the producing municipalities, "
+              f"{date.fromisoformat(meta['weather_from']).year} onward.")
 
 st.divider()
 
@@ -165,7 +179,7 @@ st.divider()
 
 # ------------------------------------------------------------------ 3. forecast
 
-st.subheader("2025/26 — the season CONAB has not closed yet")
+st.subheader(f"{open_season_label} — the season CONAB has not closed yet")
 st.caption(
     "The weather in the critical window already happened and is measured; the official "
     "yield is still a survey estimate. This is the forecast the project is willing to be "

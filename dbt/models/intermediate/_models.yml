@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: int_crop_windows
+    description: >
+      Planting, harvest and derived critical window per crop and state, as season
+      indices rather than calendar months. Thirteen rows: seven soybean states
+      and six safrinha ones, since CONAB publishes no safrinha calendar for Rio
+      Grande do Sul.
+    columns:
+      - name: crop_name
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["SOJA", "MILHO 2A SAFRA"]
+      - name: state_code
+        tests:
+          - not_null
+      - name: critical_start
+        description: >
+          Season index of the first month of the critical window. Negative values
+          are legitimate - they are months in the calendar year before harvest.
+        tests:
+          - not_null
+      - name: critical_end
+        tests:
+          - not_null
+
+  - name: int_season_weather
+    description: >
+      Critical-window weather per crop, state and season, aggregated over grid
+      cells and weighted by the production of the hubs feeding each cell. Every
+      aggregate here runs over distinct cells: hubs map many-to-one onto cells
+      (3.3 per cell in Parana, 1.0 in Bahia), so summing after the hub join would
+      inflate the South and leave Bahia untouched.
+    columns:
+      - name: crop_name
+        tests:
+          - not_null
+      - name: state_code
+        tests:
+          - not_null
+      - name: harvest_year
+        tests:
+          - not_null
+      - name: grid_cells
+        description: Distinct weather cells behind the state's number.
+        tests:
+          - not_null
+      - name: days_in_window
+        tests:
+          - not_null
+      - name: precipitation_mm
+        tests:
+          - not_null
+      - name: temp_mean_c
+        tests:
+          - not_null
+      - name: dry_days
+        tests:
+          - not_null
+      - name: growing_degree_days
+        tests:
+          - not_null
+      - name: max_dry_spell_days
+        description: >
+          Production-weighted longest run of consecutive dry days inside the
+          window. Descriptive only - it correlates 0.73 with the plain dry-day
+          count and its partial correlation with the yield residual, once dry
+          days are held constant, is +0.05.
+        tests:
+          - not_null
+      - name: max_dry_spell_worst_cell
+        tests:
+          - not_null

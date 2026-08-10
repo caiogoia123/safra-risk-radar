@@ -50,18 +50,28 @@ def main() -> int:
         frames[name] = frame
         print(f"ok   {name}.csv: {len(frame)} rows")
 
-    # The app prints this date in prose, so a missing or unparseable value
-    # takes the whole page down rather than degrading one sentence.
+    # The app prints all of these in prose, so a missing or unparseable value
+    # takes the whole page down rather than degrading one sentence. Checked one
+    # key at a time: "meta.json is broken" does not say which line of copy to fix.
     meta_path = DATA_DIR / "meta.json"
     if not meta_path.exists():
         print(f"FAIL: {meta_path} missing -- run `py -m analysis.export_app_data`")
         return 1
     try:
-        cutoff = date.fromisoformat(json.loads(meta_path.read_text(encoding="utf-8"))["weather_through"])
-    except (KeyError, ValueError, json.JSONDecodeError) as exc:
-        print(f"FAIL: meta.json has no usable 'weather_through': {exc}")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        print(f"FAIL: meta.json is not valid JSON: {exc}")
         return 1
-    print(f"ok   meta.json: weather through {cutoff}")
+    for key in ("weather_from", "weather_through"):
+        try:
+            print(f"ok   meta.json: {key} = {date.fromisoformat(meta[key])}")
+        except (KeyError, TypeError, ValueError) as exc:
+            print(f"FAIL: meta.json has no usable '{key}': {exc}")
+            return 1
+    if not isinstance(meta.get("weather_rows"), int) or meta["weather_rows"] <= 0:
+        print(f"FAIL: meta.json 'weather_rows' is not a positive integer: {meta.get('weather_rows')}")
+        return 1
+    print(f"ok   meta.json: weather_rows = {meta['weather_rows']:,}")
 
     wide = c.widen(frames["backtest"])
     for role in ("baseline", "model"):

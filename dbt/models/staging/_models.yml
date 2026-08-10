@@ -1,0 +1,105 @@
+version: 2
+
+# Only built-in generic tests are used anywhere in this project. dbt_utils would
+# give composite-key uniqueness for free, but it would also mean a packages.yml
+# and a `dbt deps` step in both workflows; the two composite keys that matter are
+# asserted by singular tests in tests/ instead, which cost nothing to install.
+
+models:
+  - name: stg_conab_grain
+    description: >
+      CONAB's grain series, one row per state x crop x season, restricted to rows
+      with planted area above zero - 61% of the source is states that do not
+      plant the crop and carry zeros.
+    columns:
+      - name: harvest_year
+        description: >
+          The calendar year the harvest lands in. Summer crops are labelled by
+          planting year in the source ('2023/24'), so the year is shifted; winter
+          crops carry a single year and are not.
+        tests:
+          - not_null
+      - name: crop_cycle
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["summer", "winter"]
+      - name: crop_name
+        tests:
+          - not_null
+      - name: state_code
+        tests:
+          - not_null
+      - name: season_label
+        tests:
+          - not_null
+      - name: yield_kg_ha
+        description: >
+          Recomputed from production and area, never taken from the source
+          column, which is rounded to one decimal in t/ha. Not null because the
+          model already filters to planted_area_ha > 0, so the division has no
+          zero denominator - if this ever fails, that filter moved.
+        tests:
+          - not_null
+      - name: planted_area_ha
+        tests:
+          - not_null
+      - name: production_t
+        tests:
+          - not_null
+
+  - name: stg_producer_hubs
+    description: >
+      The municipalities carrying 80% of each state's grain output, 510 of them,
+      each mapped to the NASA POWER grid cell its centroid falls in.
+    columns:
+      - name: municipality_id
+        tests:
+          - not_null
+          - unique
+      - name: state_code
+        tests:
+          - not_null
+      - name: mean_production_t
+        description: Used as the weight in every production-weighted aggregate.
+        tests:
+          - not_null
+      - name: grid_latitude
+        tests:
+          - not_null
+      - name: grid_longitude
+        tests:
+          - not_null
+
+  - name: stg_weather_daily
+    description: >
+      NASA POWER daily weather per grid cell from 1991 on, 3.3M rows. Fill values
+      (-999) are converted to null during ingestion.
+    columns:
+      - name: weather_date
+        tests:
+          - not_null
+      - name: day_index
+        description: >
+          Days since 1991-01-01, contiguous across year boundaries. The obvious
+          alternative, weather_year * 366 + day_of_year, looks equivalent and is
+          not: it leaves a gap at every new year, which would split exactly the
+          December-to-January dry spells the soybean window cares about.
+        tests:
+          - not_null
+      - name: grid_latitude
+        tests:
+          - not_null
+      - name: grid_longitude
+        tests:
+          - not_null
+      - name: is_dry_day
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                # The column is an integer flag, and BigQuery will not compare
+                # INT64 against the quoted default. Same reason as the seed.
+                quote: false

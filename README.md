@@ -127,7 +127,7 @@ NASA POWER daily   ─┘                                     │
 | Layer | Tech | Why |
 |---|---|---|
 | Extract & load | Python, `requests`, DuckDB | raw files kept verbatim for reproducibility |
-| Transform | dbt Core | staging → intermediate → marts, with tests |
+| Transform | dbt Core | staging → intermediate → marts, 78 tests on both targets |
 | Warehouse | DuckDB (dev) / BigQuery (prod) | same dbt project, two targets |
 | Orchestration | GitHub Actions | weekly refresh, both targets, plus CI on every push |
 | App | Streamlit | published dashboard, no Node toolchain required |
@@ -147,7 +147,7 @@ produces identical files, which is what lets the weekly commit touch only rows t
 |---|---|---|
 | [CONAB](https://portaldeinformacoes.conab.gov.br) grain series | state × crop × season | 1976/77 → 2025/26 |
 | [IBGE SIDRA 1612](https://sidra.ibge.gov.br/tabela/1612) (PAM) | municipality × crop × year | 1974 → 2024 |
-| [NASA POWER](https://power.larc.nasa.gov) daily | 0.5° grid point | 1991 → present |
+| [NASA POWER](https://power.larc.nasa.gov) daily | 0.5° grid point | 1981 → present, ingested from 1991 |
 
 **Why municipal data when the fact table is by state:** a state centroid is not where the crop
 is. Mato Grosso's centroid sits in forest, Bahia's in unirrigated scrubland. Municipal production

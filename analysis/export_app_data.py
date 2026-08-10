@@ -45,10 +45,20 @@ def export_meta() -> dict[str, str]:
     Anything the copy asserts about the data has to be read from the data.
     """
     with duckdb.connect(str(DB_PATH), read_only=True) as con:
-        cutoff = con.sql(
-            "select max(weather_date) from main_staging.stg_weather_daily"
-        ).fetchone()[0]
-    return {"weather_through": cutoff.isoformat()}
+        start, cutoff, rows = con.sql(
+            """
+            select min(weather_date), max(weather_date), count(*)
+            from main_staging.stg_weather_daily
+            """
+        ).fetchone()
+    # Start year and row count are here for the same reason as the cutoff: the
+    # app quotes all three on the front page, and a number typed into the copy
+    # drifts from the data every week the refresh runs.
+    return {
+        "weather_from": start.isoformat(),
+        "weather_through": cutoff.isoformat(),
+        "weather_rows": int(rows),
+    }
 
 
 # Sort keys per export, so the committed files depend on the data and nothing

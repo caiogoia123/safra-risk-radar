@@ -17,7 +17,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 
-from analysis.dataset import CURRENT_SEASON, WEATHER_COLUMNS, load_panel
+from analysis.dataset import WEATHER_COLUMNS, current_season, load_panel
 from analysis.trend import MIN_TRAIN_SEASONS, predict_trend
 
 # Both crops end up on a straight line, and for safrinha that is not what the
@@ -186,8 +186,10 @@ MODELS = [
 
 def run_backtest(panel: pd.DataFrame, trend_by_crop: dict | None = None) -> pd.DataFrame:
     rows = []
+    # The newest season is CONAB's open survey, not a realised harvest, so it is
+    # forecast rather than scored -- range() excluding the endpoint is the point.
     for crop, trend_kind in (trend_by_crop or TREND_BY_CROP).items():
-        for season in range(FIRST_TEST_SEASON, CURRENT_SEASON):
+        for season in range(FIRST_TEST_SEASON, current_season(panel)):
             fold = build_fold(panel, crop, season, trend_kind)
             if fold is None:
                 continue
@@ -316,13 +318,15 @@ BEST_MODEL_BY_CROP = {
 }
 
 
-def forecast_season(panel: pd.DataFrame, season: int = CURRENT_SEASON) -> pd.DataFrame:
+def forecast_season(panel: pd.DataFrame, season: int | None = None) -> pd.DataFrame:
     """Train on everything realised, then forecast a season CONAB has not closed.
 
     This is the actual use case: the weather already happened and is measured,
     the official yield has not been published. The CONAB column alongside is
     their current survey estimate -- a reference point, not ground truth.
     """
+    season = current_season(panel) if season is None else season
+
     # How much of each critical window the weather series actually covers. Below
     # this, the window is truncated rather than dry, and the model reads the
     # missing month as a drought: forecasting safrinha 2026 for Parana with 119
@@ -372,8 +376,10 @@ def main() -> None:
 
     panel = load_panel()
     results = run_backtest(panel)
+    last_scored = current_season(panel) - 1
 
-    print("Backtest walk-forward 2003-2025 (tendencia, normais e modelo so com treino)")
+    print(f"Backtest walk-forward {FIRST_TEST_SEASON}-{last_scored} "
+          "(tendencia, normais e modelo so com treino)")
     print("skill positivo = melhor que o baseline; acerto_direcao = acima/abaixo da tendencia\n")
     print(score(results).to_string(index=False))
 
@@ -392,7 +398,7 @@ def main() -> None:
         .to_string()
     )
 
-    print("\n\nAplicacao: safra %d, que a CONAB ainda nao fechou\n" % CURRENT_SEASON)
+    print(f"\n\nAplicacao: safra {current_season(panel)}, que a CONAB ainda nao fechou\n")
     print(forecast_season(panel).to_string(index=False))
 
 
