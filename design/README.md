@@ -92,8 +92,8 @@ sobre o dado pode ser digitado à mão**. Passou a ser derivado dos CSVs:
 | Rótulos das faixas ("Failure < -20%" …) | gerados dos limites do `pd.cut` |
 | Topo do eixo de exposição (0,6), de produtividade (3.600) e da faixa climática (2,3 z) | do próprio dado, com folga |
 
-⚠️ **O "55%" está errado no app publicado**, em `app/streamlit_app.py:121` — o dado atual dá
-**48,1%**. O mockup herdou o número; agora calcula.
+✅ **O "55%" já foi corrigido no app**: os dois lados calculam a fração da faixa Normal, e o
+dado atual dá **48%**.
 
 Os eixos merecem nota à parte: um teto digitado **corta a barra maior e renderiza assim
 mesmo**, subestimando em silêncio justo o caso que o gráfico existe para mostrar. É a mesma
@@ -152,7 +152,7 @@ Tudo em Streamlit + Plotly, sem dependência nova:
   linha de contexto;
 - zona sombreada e faixa climática: `add_vrect` e um segundo eixo em `make_subplots`
   (`shared_xaxes=True`, `row_heights=[0.75, 0.25]`);
-- lista rolável da safra aberta (v3): `st.container(height=300)` — rola nativamente, sem CSS, e a
+- lista da safra aberta (v3): `st.container(height=300)` — rolava nativamente, sem CSS, e a
   altura da figura cresce com o nº de linhas em vez de espremê-las;
 - legenda antes do gráfico (v3): `legend=dict(orientation="h", yanchor="bottom", y=1.02)`.
 
@@ -160,7 +160,53 @@ Tudo em Streamlit + Plotly, sem dependência nova:
 que ganha de `.srr-head` (0,1,0) — a manchete saiu com corpo de texto comum até os seletores
 virarem `p.srr-head`. Vale para todo texto injetado por `st.markdown`.
 
-Ainda **não feito** no app: versão dark e ajuste fino para telas estreitas.
+### O passe de acabamento (10/08, depois da v3)
+
+O app implementava a v3 no arranjo, mas ainda destoava do SVG no acabamento. O que foi
+igualado — e o motivo, quando não é só gosto:
+
+- **Barra escura e rodapé sangram até a borda.** Eram cartões arredondados com margem; no SVG
+  são faixas de ponta a ponta. Feito com margem negativa do tamanho exato do padding da página
+  (`--srr-pad`), não com `100vw` — `vw` conta a barra de rolagem e sobra scroll horizontal.
+  ⚠️ Quem escrever `padding:` de atalho na `.srr-top`/`.srr-pipe` zera o horizontal que a
+  `.srr-bleed` usa para realinhar, e o texto cola na borda da tela.
+- **Toolbar do Streamlit escondido** (Deploy + menu): flutuava por cima da barra escura.
+- **Fundo da página meio tom mais escuro que os cartões** (`#f9f9f7` contra `#fcfcfb`). Com os
+  dois iguais, sobrava a borda de 1px fazendo todo o trabalho de separar.
+- **`primaryColor` virou o violeta da paleta** — o azul tinha saído dos gráficos e continuava
+  nos widgets.
+- **Previsão 2025/26: os valores viraram coluna à direita**, como no SVG. Escritos fora da
+  ponta da barra, os onze caíam onde cada barra terminasse; em coluna, viram lista. Só a régua
+  do zero fica (com o rótulo "trend"), sem grade e sem eixo de %.
+- **A lista não rola mais** (aqui o app se afasta do SVG de propósito): a altura fixa de 380px
+  rolava por menos de uma linha e ainda sobrava faixa branca embaixo, porque o cartão é
+  esticado pelo vizinho mais alto. Agora `st.container(height="stretch")` +
+  `st.plotly_chart(height="stretch")` — o gráfico cresce até o pé do cartão e as 11 linhas
+  aparecem inteiras. Some junto o "scroll for N more". Esticar só é seguro porque o número de
+  linhas é limitado às 13 combinações cultura × estado que o pipeline pontua; numa lista aberta,
+  esticar espreme as linhas até virarem lascas e a altura fixa com rolagem volta a ser o certo.
+- **Severidade: o `n` de cada faixa entrou no rótulo**, com as legendas "worse/better than
+  baseline" sob o eixo e o valor em branco dentro da barra quando ela é longa demais para
+  caber fora. ⚠️ O `_value_axis` tinha de ser chamado **depois** do `_style`, que reseta os
+  eixos — chamado antes, a grade e a régua do zero voltavam a sumir.
+- **Exposição mais baixa (250px) e sem o tick do teto**, que era uma linha que barra nenhuma
+  alcança. RS ganhou rótulo e valor em negrito.
+- **Faixa climática legendada dentro do gráfico** (o que era nota embaixo) e as cores
+  seco/úmido entraram na legenda por dois traces vazios — cor por ponto não vira legenda.
+- **Os quatro KPIs saíram de `st.columns` para um `display:grid`.** Em janela estreita o rótulo
+  de um deles quebrava em duas linhas e aquele cartão ficava mais alto que os outros três.
+  ⚠️ A tentativa óbvia — esticar a corrente coluna → stElementContainer → stMarkdown com
+  `height:100%` — **piora**: em altura percentual o cartão mais alto deixa de contar para a
+  altura da linha, a linha encolhe até a do mais baixo e o mais alto vaza para fora da própria
+  coluna. Item de grid estica de graça, e como não há widget nenhum dentro dos cartões, não se
+  perde nada indo para HTML puro. O número ganhou `white-space:nowrap` + `clamp()` (em 780px
+  "3.3M" virava "3.3" com o "M" embaixo) e a nota desceu para o pé do cartão.
+- **"Table view" virou link discreto** dentro dos cartões, em vez de caixa da largura da página.
+- **O aviso de PR e MS saiu para dentro do "Method"**, como a v3 decidiu. O texto continua
+  inteiro; o que muda é que não é mais a caixa mais chamativa da página.
+
+Ainda **não feito** no app: versão dark e ajuste fino para telas estreitas (conferido só até
+1280px, onde ainda fecha).
 
 Ainda **não feito** aqui: versão dark, versão mobile (1440 é desktop), e os estados de hover —
 o mockup é estático, e o app já tem tooltip em todo gráfico.

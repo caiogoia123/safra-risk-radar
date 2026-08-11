@@ -141,6 +141,7 @@ def severity_chart(gains: pd.DataFrame, height: int = 360) -> go.Figure:
     the one job a legend can explain. The wash to the left of zero says which
     side is which without asking anyone to read the axis.
     """
+    span = max(gains["gain"].abs()) * 1.15
     fig = go.Figure()
     fig.add_vrect(x0=-100, x1=0, fillcolor=RED, opacity=0.05, line_width=0, layer="below")
     for crop, color, offset in [("Soybean", VIOLET, -0.19), ("Safrinha corn", ORANGE, 0.19)]:
@@ -151,28 +152,54 @@ def severity_chart(gains: pd.DataFrame, height: int = 360) -> go.Figure:
             marker=dict(color=color, line=dict(width=0), cornerradius=4),
             width=0.3,
             text=[f"{v:+.0f}%" for v in part["gain"]],
-            textposition="outside",
+            # A long bar to the left has no room outside its tip without landing
+            # on the category label, so that value goes inside the bar in white.
+            textposition=["inside" if v < -0.35 * span else "outside"
+                          for v in part["gain"]],
             # Ink, not the series color: a value in violet on a violet bar reads
             # as decoration, and identity is already carried by the mark itself.
             textfont=dict(color=INK_SOFT, size=12),
+            insidetextfont=dict(color="#ffffff", size=12),
+            constraintext="none",
             cliponaxis=False,
             customdata=list(zip(part.index, part["n"])),
             hovertemplate=f"<b>{crop}</b><br>%{{customdata[0]}}<br>"
                           "Error removed: %{x:.0f}%<br>n = %{customdata[1]}<extra></extra>",
         )
-    fig.update_yaxes(tickmode="array", tickvals=list(range(len(SEVERITY_ORDER))),
-                     ticktext=SEVERITY_ORDER, autorange="reversed")
+    # The n of each band next to its label: "it only wins in the tail" is an
+    # argument about sample size, and it should be legible without a hover.
+    counts = gains.groupby("severity", observed=True)["n"].sum()
+    fig.update_yaxes(
+        tickmode="array", tickvals=list(range(len(SEVERITY_ORDER))),
+        ticktext=[f"{s}<br><span style='font-size:11px'>n = {int(counts.get(s, 0))}</span>"
+                  for s in SEVERITY_ORDER],
+        autorange="reversed",
+    )
+    fig = _style(fig, height)
+    # _value_axis after _style, which resets both axes: called before it, the
+    # grid and the rule at zero were switched back off and the bars floated.
     _value_axis(fig)
     # Range from the data with headroom. A typed limit clips the longest bar and
     # still renders -- quietly understating the very case the chart is about.
-    span = max(gains["gain"].abs()) * 1.15
-    fig.update_xaxes(range=[-span, span * 0.62])
-    fig = _style(fig, height)
-    fig.update_layout(showlegend=True, bargap=0.1)
+    ticks = [t for t in range(-200, 201, 20) if -span <= t <= span * 0.62]
+    fig.update_xaxes(range=[-span, span * 0.62], ticksuffix="", tickmode="array",
+                     tickvals=ticks, showline=False,
+                     ticktext=["0" if t == 0 else f"{t:+d}%" for t in ticks])
+    # No spines: the grid and the rule at zero already carry the scale, and a
+    # frame around the bars only adds a second one.
+    fig.update_yaxes(showline=False)
+    # Which half is which, spelled out under the axis: the wash says two sides
+    # exist, the captions say what each one means.
+    for x, anchor, label in [(0.0, "left", "worse than baseline"),
+                             (1.0, "right", "better than baseline")]:
+        fig.add_annotation(xref="paper", x=x, xanchor=anchor, yref="paper", y=0,
+                           yanchor="top", yshift=-30, text=label, showarrow=False,
+                           font=dict(color=MUTED, size=11.5))
+    fig.update_layout(showlegend=True, bargap=0.1, margin=dict(b=46))
     return fig
 
 
-def exposure_chart(exposure: pd.Series, height: int = 320) -> go.Figure:
+def exposure_chart(exposure: pd.Series, height: int = 250) -> go.Figure:
     """Columns, one per state, ordered by how exposed the state is.
 
     One series, one color -- bar length already encodes the magnitude, so the
@@ -192,14 +219,33 @@ def exposure_chart(exposure: pd.Series, height: int = 320) -> go.Figure:
         # Thin: a column is capped, never filling its slot -- the leftover band
         # is air, and at 7 states a 0.32 width gave 90px slabs.
         width=0.16,
-        text=[f"{v:.2f}" for v in exposure.values],
+        # The state the chart exists to single out gets the value in ink and in
+        # bold; the rest stay recessive, the same way their bars do.
+        text=[f"<b>{v:.2f}</b>" if s == strongest else f"{v:.2f}"
+              for s, v in exposure.items()],
         textposition="outside",
-        textfont=dict(color=MUTED, size=13),
+        textfont=dict(color=[INK if s == strongest else MUTED for s in exposure.index],
+                      size=13),
+        cliponaxis=False,
         hovertemplate="<b>%{x}</b><br>Correlation: %{y:.2f}<extra></extra>",
     ))
-    high = max(0.6, float(exposure.max()) * 1.22)
-    fig.update_yaxes(range=[0, high], dtick=0.2)
-    fig.update_xaxes(tickfont=dict(color=INK_SOFT, size=13))
+    # One tick of headroom over the tallest bar, never a typed ceiling: 0.2 above
+    # the data keeps the value labels off the top and moves on its own the day a
+    # state crosses the line. Ticks stop below the ceiling -- a gridline drawn on
+    # the top of the axis is a line no bar reaches, an empty band over the chart.
+    # 12% above the tallest bar is the floor: with the ceiling exactly on the
+    # next tick, a state that reached it would push its own value label out of
+    # the plot, and the number would come out clipped by the edge of the card.
+    top = float(exposure.max())
+    high = max((int(top / 0.2) + 1) * 0.2, top * 1.12)
+    grid = [round(0.2 * i, 1) for i in range(int(high / 0.2) + 1) if 0.2 * i < high]
+    fig.update_yaxes(range=[0, high], tickmode="array", tickvals=grid,
+                     ticktext=[f"{t:.1f}" for t in grid])
+    fig.update_xaxes(
+        tickmode="array", tickvals=list(exposure.index),
+        ticktext=[f"<b>{s}</b>" if s == strongest else s for s in exposure.index],
+        tickfont=dict(color=INK_SOFT, size=13),
+    )
     return _style(fig, height)
 
 
@@ -259,6 +305,20 @@ def season_chart(series: pd.DataFrame, anomaly: pd.Series | None = None,
         fig.update_yaxes(title_text="drier →", title_font=dict(size=11, color=MUTED),
                          zeroline=True, zerolinecolor=BASELINE_RULE, zerolinewidth=1,
                          row=2, col=1)
+        # The lower panel colors two things at once and a per-point color cannot
+        # appear in a legend, so the key is drawn by two traces that plot nothing.
+        for name, color in [("Drier than normal", RED), ("Wetter", BLUE)]:
+            fig.add_scatter(x=[None], y=[None], name=name, mode="markers",
+                            marker=dict(size=10, color=color, symbol="square"),
+                            hoverinfo="skip", row=1, col=1)
+        # What the panel is, written on the panel. Below the figure it reads as a
+        # footnote to the whole card and the reader has to guess which half.
+        fig.add_annotation(
+            xref="paper", x=0, xanchor="left", yref="y2 domain", y=1, yanchor="bottom",
+            yshift=6, showarrow=False, font=dict(color=MUTED, size=11.5),
+            text="Dry-day anomaly in the critical window, in standard deviations "
+                 "— the input the model actually reads",
+        )
 
     fig.update_xaxes(dtick=5)
     fig.update_yaxes(ticksuffix="", separatethousands=True, title_text="kg/ha",
@@ -281,22 +341,37 @@ def forecast_chart(live: pd.DataFrame, height: int | None = None) -> go.Figure:
     puts this in a fixed-height scrolling container, so a long list scrolls
     rather than flattening into unreadable slivers.
     """
-    height = height or max(220, 34 * len(live) + 60)
+    height = height or max(220, 32 * len(live) + 46)
     fig = go.Figure(go.Bar(
         x=live["desvio_previsto_pct"], y=live["label"], orientation="h",
         marker=dict(color=[RED if v < FLAG_PCT / 2 else "#ef8b8a"
                            for v in live["desvio_previsto_pct"]],
                     line=dict(width=0), cornerradius=4),
-        width=0.5,
-        text=[f"{v:.1f}%" for v in live["desvio_previsto_pct"]],
-        textposition="outside",
-        textfont=dict(color=INK, size=13),
+        width=0.42,
         customdata=list(zip(live["previsao_kg_ha"], live["estimativa_conab_kg_ha"])),
         hovertemplate="<b>%{y}</b><br>Forecast: %{x:.1f}% vs trend<br>"
                       "%{customdata[0]:,.0f} kg/ha "
                       "(CONAB estimate %{customdata[1]:,.0f})<extra></extra>",
     ))
-    _value_axis(fig)
-    span = float(live["desvio_previsto_pct"].abs().max()) * 1.35
-    fig.update_xaxes(range=[-span, span * 0.18])
-    return _style(fig, height)
+    # The values live in their own right-hand column instead of floating off each
+    # bar tip. Written outside the bar they land wherever the bar happens to end,
+    # and eleven of them make a ragged edge that reads as noise; in a column they
+    # are a list you can scan, and comparing lengths stays the bar's job.
+    fig.update_xaxes(domain=[0, 0.72])
+    for label, value in zip(live["label"], live["desvio_previsto_pct"]):
+        fig.add_annotation(xref="paper", x=1, xanchor="right", y=label, yref="y",
+                           text=f"<b>{value:.1f}%</b>", showarrow=False,
+                           font=dict(color=INK, size=13))
+    fig.add_annotation(xref="x", x=0, yref="paper", y=1, yanchor="bottom",
+                       text="trend", showarrow=False, font=dict(color=MUTED, size=10.5))
+    fig = _style(fig, height)
+    # After _style, which resets the axes: no ticks and no grid here. Every bar
+    # hangs off the same rule at zero, and that rule is the only reference this
+    # list is read against -- a percent scale under it adds a second one.
+    span = float(live["desvio_previsto_pct"].abs().max()) * 1.06
+    fig.update_xaxes(range=[-span, 0], showgrid=False, showticklabels=False,
+                     showline=False, zeroline=True, zerolinecolor=BASELINE_RULE,
+                     zerolinewidth=1)
+    fig.update_yaxes(showgrid=False, showline=False)
+    fig.update_layout(margin=dict(l=8, r=8, t=22, b=8))
+    return fig

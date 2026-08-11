@@ -4,8 +4,10 @@
 # validated separately -- not an automatic flip.
 [theme]
 base = "light"
-primaryColor = "#2a78d6"
-backgroundColor = "#fcfcfb"
+primaryColor = "#4a3aa7"
+# Half a step darker than the cards (#fcfcfb). With both on the same color no
+# card stands out and the 1px border is left doing all of the work.
+backgroundColor = "#f9f9f7"
 secondaryBackgroundColor = "#f0efec"
 textColor = "#0b0b0b"
 
