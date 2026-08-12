@@ -217,12 +217,6 @@ Para rodar contra o BigQuery, defina `GCP_KEYFILE` e `GCP_PROJECT` (veja `.env.e
 `python -m ingestion --target prod` e `dbt build --target prod`. Os comandos dbt rodam de dentro de
 `dbt/`, já que o caminho do DuckDB é relativo ao diretório de trabalho.
 
-## Diário de engenharia
-
-`docs/PROJETO.md` é o diário mantido durante todo o projeto: as decisões, as medições que as
-resolveram e os becos sem saída. Foi escrito para mim, não para um leitor — mas é onde qualquer
-afirmação acima foi discutida por inteiro.
-
 ## Licença
 
 MIT

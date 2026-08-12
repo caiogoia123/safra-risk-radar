@@ -11,6 +11,10 @@ __pycache__/
 # must be committed.
 /data/
 
+# Engineering log: kept on disk, deliberately out of the published repo. Named
+# file rather than the whole folder, so public docs can still live in docs/.
+/docs/PROJETO.md
+
 # dbt
 dbt/target/
 dbt/dbt_packages/

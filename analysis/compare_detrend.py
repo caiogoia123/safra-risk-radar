@@ -1,8 +1,8 @@
 """Which trend shape forecasts next season's yield best, out of sample?
 
-Answers the open question left in docs/PROJETO.md ("linear detrend does not work for
-safrinha"), by measurement rather than by argument: every shape is refitted on
-seasons before T and scored on T, walking forward one season at a time.
+Settles an open question -- "a linear detrend does not work for safrinha" -- by
+measurement rather than by argument: every shape is refitted on seasons before T
+and scored on T, walking forward one season at a time.
 
     py -m analysis.compare_detrend        (from the repo root)
 """

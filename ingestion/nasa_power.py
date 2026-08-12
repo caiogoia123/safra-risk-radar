@@ -17,7 +17,8 @@ this morning is stale tomorrow, and the next local run re-fetches all 255 cells
 (~3 min) for one more day of weather. Deliberate, but it does bound what the
 cache is for -- it lets an interrupted run resume within the same day, not
 across days. Silently loading last week's window is the failure this replaces,
-and the epoch cache in docs/PROJETO.md is what would make the refresh cheap instead.
+and splitting the series would make the refresh cheap instead -- an immutable
+history held in actions/cache, with only the current year fetched per run.
 Working offline, or on parsing, is what --allow-stale is for.
 """
 
