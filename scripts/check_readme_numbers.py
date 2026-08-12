@@ -46,7 +46,7 @@ DATA_DIR = REPO_ROOT / "app" / "data"
 # Positions, not retyped labels: the bands are built from FLAG_PCT/FAIL_PCT, so a
 # threshold change has to reach this file through charts.py rather than silently
 # comparing against a string that no longer exists.
-FAILURE, MID, NORMAL, _, GOOD = c.SEVERITY_ORDER
+FAILURE, MID, NORMAL, GOOD_MID, GOOD = c.SEVERITY_ORDER
 
 # State names are spelled the same in both languages, so this table is shared.
 STATE_ROWS = {name: code for code, name in c.STATE_NAME.items()}
@@ -66,7 +66,12 @@ class Doc:
     state_header: str
     skill: str
     normal_share: str
+    soy_sample: str
+    walkthrough_shortfall: str
+    walkthrough_normal: str
     corn_bands: str
+    soy_recall: str
+    soy_precision: str
     ratio: str
     ratio_words: dict[int, str]
     dry_spell: str
@@ -80,17 +85,29 @@ class Doc:
 DOCS = [
     Doc(
         path="README.md",
-        severity_header="Actual deviation",
-        severity_rows={"Shortfall < -20%": FAILURE, "-20% to -10%": MID,
-                       "Normal ±10%": NORMAL, "Good > +20%": GOOD},
+        severity_header="Baseline error",
+        severity_rows={"Severe shortfall: below -20%": FAILURE,
+                       "Moderate shortfall: -20% to -10%": MID,
+                       "Normal season: ±10%": NORMAL,
+                       "Good season: +10% to +20%": GOOD_MID,
+                       "Very good season: above +20%": GOOD},
         change_suffix="% error",
-        detector_header="Real events",
+        detector_header="Alarms raised",
         crop_rows={"Soybean": "SOJA", "Second-crop corn": "MILHO 2A SAFRA"},
         crop_corr_header="Dry-day anomaly",
         state_header="| State | Rainfall |",
         skill=r"([\d.]+)% better on soybean, ([\d.]+)% on second-crop corn",
-        normal_share=r"normal years are (\d+)% of the sample",
-        corn_bands=r"([-+]\d+)% error on shortfalls, ([-+]\d+)% in normal years",
+        normal_share=r"(\d+)% across both crops",
+        soy_sample=r"(\d+) of the (\d+) soybean seasons",
+        walkthrough_shortfall=r"across the (\d+) seasons that fell more than 20% short.*?"
+                              r"off by ([\d.]+) percentage points on average, while the model "
+                              r"was off by ([\d.]+) — \*\*(\d+)% less error\*\*",
+        walkthrough_normal=r"across the (\d+) seasons where nothing unusual happened, the "
+                           r"baseline is off by only ([\d.]+) \(.*?\) and the model by ([\d.]+)",
+        corn_bands=r"that ([-+]\d+)% becomes ([-+]\d+)% on severe shortfalls, "
+                   r"and ([-+]\d+)% in a normal year",
+        soy_recall=r"(\d+) of the (\d+) real shortfalls: (\d+)%",
+        soy_precision=r"(\d+) of (\d+) alarms: (\d+)%\. The other (\d+) were false alarms",
         ratio=r"roughly (\w+ ?\w*) as rainfall-sensitive",
         ratio_words={2: "twice", 3: "three times", 4: "four times", 5: "five times"},
         dry_spell=r"\((-[\d.]+) against (-[\d.]+) on soybean\)",
@@ -98,22 +115,34 @@ DOCS = [
                   r"at \*\*(-\d+)% against trend\*\* with (\d+) extra dry days",
         pr_season=r"corn in (\d{4}) came in at \*\*(-\d+)%\*\* "
                   r"with rainfall at \*\*(-[\d.]+) standard",
-        backtest_window=r"walk-forward (\d{4})–(\d{4})",
+        backtest_window=r"\((\d+) states × (\d{4})–(\d{4})\)",
         corr_window=r"normal, over (\d{4})–(\d{4})",
     ),
     Doc(
         path="README.pt-BR.md",
-        severity_header="Desvio real",
-        severity_rows={"Quebra < -20%": FAILURE, "-20% a -10%": MID,
-                       "Normal ±10%": NORMAL, "Boa > +20%": GOOD},
+        severity_header="Erro do baseline",
+        severity_rows={"Quebra forte: abaixo de -20%": FAILURE,
+                       "Quebra moderada: -20% a -10%": MID,
+                       "Safra normal: ±10%": NORMAL,
+                       "Safra boa: +10% a +20%": GOOD_MID,
+                       "Safra muito boa: acima de +20%": GOOD},
         change_suffix="% de erro",
-        detector_header="Eventos reais",
+        detector_header="Alarmes disparados",
         crop_rows={"Soja": "SOJA", "Milho segunda safra": "MILHO 2A SAFRA"},
         crop_corr_header="Anomalia de dias secos",
         state_header="| Estado | Chuva |",
         skill=r"([\d,]+)% melhor na soja, ([\d,]+)% no milho segunda safra",
-        normal_share=r"anos normais são (\d+)% da amostra",
-        corn_bands=r"([-+]\d+)% de erro nas quebras, ([-+]\d+)% em anos normais",
+        normal_share=r"(\d+)% somando as duas culturas",
+        soy_sample=r"(\d+) das (\d+) safras de soja",
+        walkthrough_shortfall=r"nas (\d+) safras que quebraram mais de 20%.*?"
+                              r"errou ([\d,]+) pontos percentuais em média, e o modelo errou "
+                              r"([\d,]+) — \*\*(\d+)% menos erro\*\*",
+        walkthrough_normal=r"nas (\d+) safras em que não aconteceu nada de anormal, o baseline "
+                           r"erra só ([\d,]+) \(.*?\) e o modelo erra ([\d,]+)",
+        corn_bands=r"([-+]\d+)% de erro vira ([-+]\d+)% nas quebras fortes, "
+                   r"e ([-+]\d+)% em ano normal",
+        soy_recall=r"(\d+) das (\d+) quebras reais: (\d+)%",
+        soy_precision=r"(\d+) dos (\d+) alarmes: (\d+)%\. Os outros (\d+) foram falso alarme",
         ratio=r"cerca de (\w+) vezes mais sensível",
         ratio_words={2: "duas", 3: "três", 4: "quatro", 5: "cinco"},
         dry_spell=r"\((-[\d,]+) contra (-[\d,]+) na soja\)",
@@ -121,7 +150,7 @@ DOCS = [
                   r"com \*\*(-\d+)% ante a tendência\*\* e (\d+) dias secos a mais",
         pr_season=r"milho segunda safra do Paraná em (\d{4}) fechou em \*\*(-\d+)%\*\* "
                   r"com chuva a \*\*(-[\d,]+) desvios",
-        backtest_window=r"walk-forward (\d{4})–(\d{4})",
+        backtest_window=r"\((\d+) estados × (\d{4})–(\d{4})\)",
         corr_window=r"ao longo de (\d{4})–(\d{4})",
         decimal_comma=True,
     ),
@@ -212,15 +241,40 @@ def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -
 
     # The share that dilutes the global metric -- the sentence exists to explain
     # why the average looks like a tie, so a wrong value there is not cosmetic.
+    # It is quoted twice, because the two figures answer different questions and
+    # were once conflated: the soybean table alone says 89 of 161, while the
+    # sample that dilutes RMSE is both crops pooled.
     counts = wide["severity"].value_counts()
     rep.check(f"{tag} ordinary-season share", prose(flat, doc.normal_share)[0],
               f"{counts[NORMAL] / counts.sum() * 100:.0f}")
+    said = prose(flat, doc.soy_sample)
+    rep.check(f"{tag} soybean ordinary seasons", said[0],
+              f"{int((soy['severity'] == NORMAL).sum())}")
+    rep.check(f"{tag} soybean seasons", said[1], f"{len(soy)}")
+
+    # The paragraph that walks the reader through two rows retypes four values
+    # out of the table above it. Retyped is exactly how the 55%/48% error got in.
+    for label, pattern, band in ((f"{tag} walkthrough shortfall",
+                                  doc.walkthrough_shortfall, FAILURE),
+                                 (f"{tag} walkthrough normal",
+                                  doc.walkthrough_normal, NORMAL)):
+        group = soy[soy["severity"] == band]
+        base, model = errors(group)
+        said = prose(flat, pattern)
+        rep.check(f"{label} n", said[0], f"{len(group)}")
+        rep.check(f"{label} baseline RMSE", said[1], f"{base:.1f}")
+        rep.check(f"{label} model RMSE", said[2], f"{model:.1f}")
+        if len(said) > 3:  # only the shortfall sentence restates the change
+            rep.check(f"{label} change", said[3], f"{abs((model - base) / base * 100):.0f}")
 
     said = prose(flat, doc.corn_bands)
+    base, model = errors(soy[soy["severity"] == FAILURE])
+    rep.check(f"{tag} soybean shortfall change (restated)", said[0],
+              f"{(model - base) / base * 100:+.0f}")
     base, model = errors(corn[corn["severity"] == FAILURE])
-    rep.check(f"{tag} corn shortfall change", said[0], f"{(model - base) / base * 100:+.0f}")
+    rep.check(f"{tag} corn shortfall change", said[1], f"{(model - base) / base * 100:+.0f}")
     base, model = errors(corn[corn["severity"] == NORMAL])
-    rep.check(f"{tag} corn normal-year change", said[1], f"{(model - base) / base * 100:+.0f}")
+    rep.check(f"{tag} corn normal-year change", said[2], f"{(model - base) / base * 100:+.0f}")
 
     published = table_rows(text, doc.detector_header)
     for label, crop in doc.crop_rows.items():
@@ -235,6 +289,21 @@ def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -
         rep.check(f"{tag} {label} precision", cells[4], f"{hit / flagged.sum() * 100:.0f}%")
         rep.check(f"{tag} {label} baseline flags", cells[5],
                   f"{int((sub['baseline'] <= c.FLAG_PCT).sum())}")
+
+    # Recall and precision are spelled out underneath with soybean's own counts,
+    # so the reader can see where the percentages come from. Same numbers as the
+    # table, typed a second time -- which is the drift this file exists to catch.
+    real, flagged = soy["actual_pct"] <= c.FLAG_PCT, soy["model"] <= c.FLAG_PCT
+    hit = int((real & flagged).sum())
+    said = prose(flat, doc.soy_recall)
+    rep.check(f"{tag} soybean recall hits", said[0], f"{hit}")
+    rep.check(f"{tag} soybean recall base", said[1], f"{int(real.sum())}")
+    rep.check(f"{tag} soybean recall", said[2], f"{hit / real.sum() * 100:.0f}")
+    said = prose(flat, doc.soy_precision)
+    rep.check(f"{tag} soybean precision hits", said[0], f"{hit}")
+    rep.check(f"{tag} soybean precision base", said[1], f"{int(flagged.sum())}")
+    rep.check(f"{tag} soybean precision", said[2], f"{hit / flagged.sum() * 100:.0f}")
+    rep.check(f"{tag} soybean false alarms", said[3], f"{int((~real & flagged).sum())}")
 
     # Same cutoff the app uses, and for the same reason: the newest season is
     # CONAB's open estimate, not a harvest. Read from the data, never typed.
@@ -299,7 +368,9 @@ def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -
     rep.check(f"{tag} PR 2021 residual", said[1], f"{row['yield_residual_pct'] * 100:.0f}")
     rep.check(f"{tag} PR 2021 rainfall z", said[2], f"{row['precipitation_anomaly_z']:.2f}")
 
-    rep.check(f"{tag} backtest window", "–".join(prose(flat, doc.backtest_window)),
+    said = prose(flat, doc.backtest_window)
+    rep.check(f"{tag} soybean states", said[0], f"{soy['state_code'].nunique()}")
+    rep.check(f"{tag} backtest window", "–".join(said[1:]),
               f"{wide['harvest_year'].min()}–{wide['harvest_year'].max()}")
     rep.check(f"{tag} correlation window", "–".join(prose(flat, doc.corr_window)),
               f"{closed['harvest_year'].min()}–{closed['harvest_year'].max()}")
