@@ -16,6 +16,13 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  # Two manual dispatches minutes apart both checked out the same commit, both
+  # exported the same data, and the second push was rejected as non-fast-forward.
+  # Queue them instead: the run is idempotent, so the loser has nothing to add.
+  group: refresh
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -85,13 +92,28 @@ jobs:
         run: python -m analysis.export_app_data
 
       - name: Commit if the data moved
+        # `concurrency` keeps two refreshes apart, but the remote can still move
+        # under a run that takes minutes -- a push to main is enough. So on a
+        # rejected push, re-point HEAD at the new origin/main and stage the
+        # export again: these files are generated output, not authored content,
+        # so the fresher run simply wins. A rebase would instead try to merge two
+        # versions of the same regenerated rows and stop on a conflict.
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/data
-          if git diff --staged --quiet; then
-            echo "No change in the exported data."
-          else
+          for attempt in 1 2 3; do
+            git add app/data
+            if git diff --staged --quiet; then
+              echo "No change in the exported data."
+              exit 0
+            fi
             git commit -m "Refresh dashboard data [skip ci]"
-            git push
-          fi
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt); replaying onto the updated remote."
+            git fetch origin main
+            git reset --mixed origin/main
+          done
+          echo "::error::Could not push the refreshed data after 3 attempts."
+          exit 1
