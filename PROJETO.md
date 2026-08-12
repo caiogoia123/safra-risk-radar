@@ -990,3 +990,33 @@ página só para quem escolhesse aquele par.
 Armadilha de CSS que custou uma rodada: o Streamlit estiliza `.stMarkdown p`, que tem
 especificidade maior que uma classe solta. A manchete saiu com o corpo de texto comum até os
 seletores virarem `p.srr-head`. **Classe solta não vence o CSS do Streamlit.**
+
+**12/08/2026 — sessão 10 (trabalho): o refresh ficou vermelho por corrida, não por dado**
+
+Dois `workflow_dispatch` do `refresh.yml` se sobrepuseram em 11/08. Os dois deram checkout em
+`907cb14`; o primeiro terminou às 16:40 e empurrou `496bdf0`; o segundo commitou o mesmo export
+sobre o mesmo pai e levou `! [rejected] main -> main (fetch first)`. A prova da sobreposição está
+no relógio: para o push ser recusado, o remote já tinha de estar em `496bdf0`, e para o checkout
+daquele run não enxergar `496bdf0`, ele tinha de ter começado antes das 16:40. **Nada se perdeu** —
+o run vencedor publicou as mesmas 6 linhas alteradas.
+
+Duas correções no `refresh.yml`: `concurrency: {group: refresh, cancel-in-progress: false}`, que
+enfileira os dispatches, e um laço de 3 tentativas no passo de commit que, ao ser rejeitado, faz
+`git fetch origin main` + `git reset --mixed origin/main` e re-stageia o export. O `concurrency`
+sozinho não bastava — o remote também se move se o Caio empurrar um commit durante os ~6 min do job.
+
+**Reset, e não rebase, por um motivo semântico:** estes CSVs são saída gerada, não conteúdo
+autoral, então o run mais novo vence por definição. Um `pull --rebase` tentaria mesclar duas
+versões das *mesmas linhas regeneradas* e pararia em conflito — travando a workflow exatamente no
+cenário que ela deveria absorver sozinha.
+
+Verificação antes do commit: a corrida foi reproduzida em repositórios locais (um bare e dois
+clones no mesmo commit), rodando o passo novo literalmente. Com dados diferentes ele empurra na 2ª
+tentativa e o histórico fica linear, sem merge commit; com dados idênticos — o caso real de 11/08 —
+sai `No change in the exported data` e o run fecha verde. O run de produção do dia (`584352b`,
+08:23) passou pelo **caminho feliz**, ou seja, provou que a mudança não quebrou o fluxo normal; o
+laço de recuperação continua provado só pela simulação, porque só dispara sob concorrência real.
+
+Lição que vale além deste projeto: **um passo de CI que escreve no próprio repositório tem de
+tratar o remote como móvel.** O `git push` limpo só funciona enquanto ninguém mais empurra, e a
+janela de risco é a duração inteira do job, não o instante do push.
