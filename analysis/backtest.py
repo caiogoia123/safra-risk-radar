@@ -40,7 +40,7 @@ TREND_BY_CROP = {
 }
 
 # The dry spell is deliberately absent: it correlates 0.73 with dry_days and its
-# partial correlation with the residual is +0.05. See PROJETO.md.
+# partial correlation with the residual is +0.05. See docs/PROJETO.md.
 FEATURES = [c for c in WEATHER_COLUMNS if c != "max_dry_spell_days"]
 
 FIRST_TEST_SEASON = 2003

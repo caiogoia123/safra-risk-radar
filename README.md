@@ -212,6 +212,12 @@ To run against BigQuery, set `GCP_KEYFILE` and `GCP_PROJECT` (see `.env.example`
 `python -m ingestion --target prod` and `dbt build --target prod`. dbt commands run from inside
 `dbt/`, since the DuckDB path is relative to the working directory.
 
+## Engineering log
+
+`docs/PROJETO.md` is the working log kept throughout: the decisions, the measurements that settled
+them, and the dead ends. It is in Portuguese and was written for me rather than for a reader — but
+it is where anything asserted above was argued out.
+
 ## License
 
 MIT
