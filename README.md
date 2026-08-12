@@ -22,32 +22,56 @@ being predicted.
 
 ## The finding: this is not a yield forecaster
 
-Averaged over every season, the model essentially ties the naive baseline of "yield equals
-trend" — 3.4% better on soybean, 1.2% on second-crop corn. Published on that number alone, the
-honest conclusion would be "does not beat the trend."
+Two words the tables below lean on:
 
-**The average hides the result.** Split by how bad the season actually was (soybean,
-walk-forward 2003–2025, RMSE of the yield residual in percentage points):
+- **Baseline** is the simplest possible guess: "the harvest will come in wherever the state's
+  trend says." It is the yardstick — the model is worth nothing unless it beats that.
+- **Error** is how far a prediction landed from what actually happened, in **percentage points of
+  yield**. An error of 20 means the call was 20% away from the real harvest. **Lower is better.**
 
-| Actual deviation | n | Baseline | Model | Change |
+Averaged over every season, the model essentially ties the baseline — 3.4% better on soybean,
+1.2% on second-crop corn. Published on that number alone, the honest conclusion would be "does
+not beat the trend."
+
+**The average hides the result.** The table below takes the 161 soybean seasons in the backtest
+(7 states × 2003–2025), splits them by how good or bad the harvest actually turned out, and
+compares the baseline's error to the model's error inside each band:
+
+| How the season ended (vs. trend) | Seasons | Baseline error | Model error | Change |
 |---|---|---|---|---|
-| Shortfall < -20% | 14 | 34.4 | 20.6 | **-40% error** |
-| -20% to -10% | 15 | 15.7 | 10.8 | **-31% error** |
-| Normal ±10% | 89 | 5.9 | 9.6 | +61% error |
-| Good > +20% | 12 | 33.5 | 34.8 | +4% error |
+| Severe shortfall: below -20% | 14 | 34.4 | 20.6 | **-40% error** |
+| Moderate shortfall: -20% to -10% | 15 | 15.7 | 10.8 | **-31% error** |
+| Normal season: ±10% | 89 | 5.9 | 9.6 | +61% error |
+| Good season: +10% to +20% | 31 | 14.8 | 18.3 | +24% error |
+| Very good season: above +20% | 12 | 33.5 | 34.8 | +4% error |
 
-The model earns its keep only when the harvest breaks, and actively hurts in a normal year —
-and normal years are 48% of the sample, which is exactly what dilutes the global metric.
-Second-crop corn repeats the pattern, weaker: -27% error on shortfalls, +68% in normal years.
+Reading the first row: across the 14 seasons that fell more than 20% short, simply assuming the
+trend was off by 34.4 percentage points on average, while the model was off by 20.6 — **40% less
+error**. In the middle row, across the 89 seasons where nothing unusual happened, the baseline is
+off by only 5.9 (the trend already is the right answer) and the model by 9.6: it invents movement
+where there was nothing to predict.
 
-Read as a detector instead of a forecaster, on seasons finishing 10% or more below trend:
+**The model earns its keep only when the harvest breaks, and actively hurts in a normal year** —
+and normal years are most of the sample (89 of the 161 soybean seasons; 48% across both crops),
+which is exactly what dilutes the global metric. Second-crop corn repeats the pattern, weaker:
+that -40% becomes -27% on severe shortfalls, and +68% in a normal year.
 
-| Crop | Real events | Flagged | Correct | Recall | Precision | Baseline flags |
+The practical question, though, is not "what will the yield be" but "will it break or not."
+Switching the yardstick to that question — counting as a shortfall any season finishing 10% or
+more below trend:
+
+| Crop | Shortfalls that happened | Alarms raised | Alarms right | Recall | Precision | Baseline alarms |
 |---|---|---|---|---|---|---|
 | Soybean | 29 | 28 | 13 | 45% | 46% | **0** |
 | Second-crop corn | 38 | 34 | 19 | 50% | 56% | **0** |
 
-The baseline detects zero shortfalls by construction — a trend line never predicts a bad year.
+- **Recall** — of the shortfalls that really happened, how many the model called in advance. On
+  soybean, 13 of the 29 real shortfalls: 45%.
+- **Precision** — of the alarms it raised, how many were real shortfalls. On soybean, 13 of 28
+  alarms: 46%. The other 15 were false alarms.
+
+The last column is the point: the baseline raises **zero** alarms by construction — a trend line
+never predicts a bad year, so it never raises a false alarm and never warns about anything either.
 So the honest framing is: **a shortfall detector that catches about half of them with about
 half false alarms, against a baseline that never warns at all.** For a trader or a credit desk,
 half the shortfalls called early is worth more than 3% of RMSE.

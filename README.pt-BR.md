@@ -21,33 +21,57 @@ Aqui o clima é a **entrada**, já medida — nada sobre o clima futuro está se
 
 ## O achado: isto não é um previsor de safra
 
-Na média de todas as safras, o modelo praticamente empata com o baseline ingênuo de
-"produtividade = tendência" — 3,4% melhor na soja, 1,2% no milho segunda safra. Publicado só por
-esse número, a conclusão honesta seria "não bate a tendência".
+Duas palavras que as tabelas abaixo usam o tempo todo:
 
-**A média esconde o resultado.** Separando por quão ruim a safra realmente foi (soja, walk-forward
-2003–2025, RMSE do resíduo de produtividade em pontos percentuais):
+- **Baseline** é o palpite mais simples que existe: "a safra vai dar o que a tendência do estado
+  diz". É a régua — o modelo só serve para alguma coisa se ganhar dela.
+- **Erro** é o quanto a previsão passou longe do que aconteceu de verdade, medido em **pontos
+  percentuais de produtividade**. Erro 20 quer dizer que a previsão ficou 20% longe da safra real.
+  **Quanto menor, melhor.**
 
-| Desvio real | n | Baseline | Modelo | Mudança |
+Na média de todas as safras, o modelo praticamente empata com o baseline — 3,4% melhor na soja,
+1,2% no milho segunda safra. Publicado só por esse número, a conclusão honesta seria "não bate a
+tendência".
+
+**A média esconde o resultado.** A tabela abaixo pega as 161 safras de soja testadas (7 estados ×
+2003–2025), separa por quão boa ou ruim a safra realmente foi, e dentro de cada faixa compara o
+erro do baseline com o erro do modelo:
+
+| Como a safra fechou (contra a tendência) | Safras | Erro do baseline | Erro do modelo | Mudança |
 |---|---|---|---|---|
-| Quebra < -20% | 14 | 34,4 | 20,6 | **-40% de erro** |
-| -20% a -10% | 15 | 15,7 | 10,8 | **-31% de erro** |
-| Normal ±10% | 89 | 5,9 | 9,6 | +61% de erro |
-| Boa > +20% | 12 | 33,5 | 34,8 | +4% de erro |
+| Quebra forte: abaixo de -20% | 14 | 34,4 | 20,6 | **-40% de erro** |
+| Quebra moderada: -20% a -10% | 15 | 15,7 | 10,8 | **-31% de erro** |
+| Safra normal: ±10% | 89 | 5,9 | 9,6 | +61% de erro |
+| Safra boa: +10% a +20% | 31 | 14,8 | 18,3 | +24% de erro |
+| Safra muito boa: acima de +20% | 12 | 33,5 | 34,8 | +4% de erro |
 
-O modelo se paga só quando a safra quebra, e atrapalha de verdade em ano normal — e os anos normais
-são 48% da amostra, que é exatamente o que dilui a métrica global. O milho segunda safra repete o
-padrão, mais fraco: -27% de erro nas quebras, +68% em anos normais.
+Lendo a primeira linha: nas 14 safras que quebraram mais de 20%, quem simplesmente supôs a
+tendência errou 34,4 pontos percentuais em média, e o modelo errou 20,6 — **40% menos erro**. Já na
+linha do meio, nas 89 safras em que não aconteceu nada de anormal, o baseline erra só 5,9 (a
+tendência já é a resposta certa) e o modelo erra 9,6: ele inventa movimento onde não havia nada
+para prever.
 
-Lido como detector em vez de previsor, sobre as safras que fecharam 10% ou mais abaixo da
+**O modelo se paga só quando a safra quebra, e atrapalha de verdade em ano normal** — e ano normal
+é a maior parte da amostra (89 das 161 safras de soja; 48% somando as duas culturas), que é
+exatamente o que dilui a métrica global. O milho segunda safra repete o padrão, mais fraco: -40% de
+erro vira -27% nas quebras fortes, e +68% em ano normal.
+
+A pergunta prática, porém, não é "quanto vai dar a safra" e sim "vai quebrar ou não". Trocando a
+régua para essa pergunta — chamando de quebra toda safra que fechou 10% ou mais abaixo da
 tendência:
 
-| Cultura | Eventos reais | Sinalizados | Corretos | Recall | Precisão | Sinais do baseline |
+| Cultura | Quebras que aconteceram | Alarmes disparados | Alarmes certos | Recall | Precisão | Alarmes do baseline |
 |---|---|---|---|---|---|---|
 | Soja | 29 | 28 | 13 | 45% | 46% | **0** |
 | Milho segunda safra | 38 | 34 | 19 | 50% | 56% | **0** |
 
-O baseline detecta zero quebras por construção — uma reta de tendência nunca prevê um ano ruim.
+- **Recall** — das quebras que realmente aconteceram, quantas o modelo apontou antes. Na soja, 13
+  das 29 quebras reais: 45%.
+- **Precisão** — dos alarmes que ele disparou, quantos eram quebra de verdade. Na soja, 13 dos 28
+  alarmes: 46%. Os outros 15 foram falso alarme.
+
+A última coluna é o ponto: o baseline dispara **zero** alarmes por construção — uma reta de
+tendência nunca prevê um ano ruim, então ela nunca dá alarme falso, mas também nunca avisa de nada.
 Então o enquadramento honesto é: **um detector de quebra que pega cerca de metade delas com cerca
 de metade de alarme falso, contra um baseline que nunca avisa.** Para uma mesa de trading ou de
 crédito, metade das quebras apontada cedo vale mais do que 3% de RMSE.
