@@ -21,8 +21,10 @@ otherwise -- it writes decimals with a comma, which is the only difference the
 comparison has to absorb.
 
 Covered: everything derivable from app/data. Deliberately not covered, and still
-typed by hand -- the twelve-way detrend comparison (needs the warehouse), the hub
-and grid-cell counts (fixed by versioned reference data), and the dbt test count.
+typed by hand -- the twelve-way detrend comparison and the per-model-family skill
+spread (both need the warehouse), the one-variable rule comparison (needs the
+walk-forward z-scores, which are not exported), the hub and grid-cell counts
+(fixed by versioned reference data), and the dbt test count.
 
     py scripts/check_readme_numbers.py
 """
@@ -34,6 +36,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -51,6 +54,11 @@ FAILURE, MID, NORMAL, GOOD_MID, GOOD = c.SEVERITY_ORDER
 # State names are spelled the same in both languages, so this table is shared.
 STATE_ROWS = {name: code for code, name in c.STATE_NAME.items()}
 
+# The bootstrap interval is published rounded, and its bounds move a couple of
+# points between seeds. Asserting an exact bound would be asserting the seed, so
+# the check allows the slack the estimate actually has.
+CI_TOLERANCE_PP = 3
+
 
 @dataclass(frozen=True)
 class Doc:
@@ -64,14 +72,14 @@ class Doc:
     crop_rows: dict[str, str]
     crop_corr_header: str
     state_header: str
+    weather_rows: str
+    scale: str
+    correlation: str
     skill: str
-    normal_share: str
     soy_sample: str
-    walkthrough_shortfall: str
-    walkthrough_normal: str
-    corn_bands: str
-    soy_recall: str
-    soy_precision: str
+    base_rate_lift: str
+    recall_ci: str
+    baseline_zero: str
     ratio: str
     ratio_words: dict[int, str]
     dry_spell: str
@@ -96,18 +104,15 @@ DOCS = [
         crop_rows={"Soybean": "SOJA", "Second-crop corn": "MILHO 2A SAFRA"},
         crop_corr_header="Dry-day anomaly",
         state_header="| State | Rainfall |",
-        skill=r"([\d.]+)% better on soybean, ([\d.]+)% on second-crop corn",
-        normal_share=r"(\d+)% across both crops",
-        soy_sample=r"(\d+) of the (\d+) soybean seasons",
-        walkthrough_shortfall=r"across the (\d+) seasons that fell more than 20% short.*?"
-                              r"off by ([\d.]+) percentage points on average, while the model "
-                              r"was off by ([\d.]+) — \*\*(\d+)% less error\*\*",
-        walkthrough_normal=r"across the (\d+) seasons where nothing unusual happened, the "
-                           r"baseline is off by only ([\d.]+) \(.*?\) and the model by ([\d.]+)",
-        corn_bands=r"that ([-+]\d+)% becomes ([-+]\d+)% on severe shortfalls, "
-                   r"and ([-+]\d+)% in a normal year",
-        soy_recall=r"(\d+) of the (\d+) real shortfalls: (\d+)%",
-        soy_precision=r"(\d+) of (\d+) alarms: (\d+)%\. The other (\d+) were false alarms",
+        weather_rows=r"([\d.]+) million daily weather rows",
+        scale=r"(\d+) crop × state pairs, (\d+) seasons scored",
+        correlation=r"\*\*\+([\d.]+)\*\* on soybean and \*\*\+([\d.]+)\*\* on second-crop corn",
+        skill=r"gain over the baseline: ([\d.]+)% on soybean and ([\d.]+)% on second-crop corn",
+        soy_sample=r"(\d+) of the (\d+), and most of the sample",
+        base_rate_lift=r"shortfalls are (\d+)% of soybean seasons and (\d+)% of safrinha seasons, "
+                       r"so (\d+)% and (\d+)% are gains of ([\d.]+)× and ([\d.]+)× over chance",
+        recall_ci=r"soybean recall runs from roughly (\d+)% to (\d+)%",
+        baseline_zero=r"baseline raises \*\*(\w+)\*\* alarms",
         ratio=r"roughly (\w+ ?\w*) as rainfall-sensitive",
         ratio_words={2: "twice", 3: "three times", 4: "four times", 5: "five times"},
         dry_spell=r"\((-[\d.]+) against (-[\d.]+) on soybean\)",
@@ -131,18 +136,15 @@ DOCS = [
         crop_rows={"Soja": "SOJA", "Milho segunda safra": "MILHO 2A SAFRA"},
         crop_corr_header="Anomalia de dias secos",
         state_header="| Estado | Chuva |",
-        skill=r"([\d,]+)% melhor na soja, ([\d,]+)% no milho segunda safra",
-        normal_share=r"(\d+)% somando as duas culturas",
-        soy_sample=r"(\d+) das (\d+) safras de soja",
-        walkthrough_shortfall=r"nas (\d+) safras que quebraram mais de 20%.*?"
-                              r"errou ([\d,]+) pontos percentuais em média, e o modelo errou "
-                              r"([\d,]+) — \*\*(\d+)% menos erro\*\*",
-        walkthrough_normal=r"nas (\d+) safras em que não aconteceu nada de anormal, o baseline "
-                           r"erra só ([\d,]+) \(.*?\) e o modelo erra ([\d,]+)",
-        corn_bands=r"([-+]\d+)% de erro vira ([-+]\d+)% nas quebras fortes, "
-                   r"e ([-+]\d+)% em ano normal",
-        soy_recall=r"(\d+) das (\d+) quebras reais: (\d+)%",
-        soy_precision=r"(\d+) dos (\d+) alarmes: (\d+)%\. Os outros (\d+) foram falso alarme",
+        weather_rows=r"([\d,]+) milhões de linhas de clima diário",
+        scale=r"(\d+) pares cultura × estado, (\d+) safras avaliadas",
+        correlation=r"\*\*\+([\d,]+)\*\* na soja e \*\*\+([\d,]+)\*\* no milho segunda safra",
+        skill=r"sobre o baseline: ([\d,]+)% na soja e ([\d,]+)% no milho segunda safra",
+        soy_sample=r"(\d+) das (\d+), e a maior parte da amostra",
+        base_rate_lift=r"quebras são (\d+)% das safras de soja e (\d+)% das\s*de safrinha, então "
+                       r"(\d+)% e (\d+)% representam ganho de ([\d,]+)× e ([\d,]+)× sobre o acaso",
+        recall_ci=r"recall da soja vai de aproximadamente (\d+)% a (\d+)%",
+        baseline_zero=r"baseline dispara\s*\*\*(\w+)\*\* alarmes",
         ratio=r"cerca de (\w+) vezes mais sensível",
         ratio_words={2: "duas", 3: "três", 4: "quatro", 5: "cinco"},
         dry_spell=r"\((-[\d,]+) contra (-[\d,]+) na soja\)",
@@ -168,14 +170,28 @@ class Report:
     def __init__(self) -> None:
         self.failures: list[str] = []
 
-    def check(self, label: str, published: str, computed: str) -> None:
+    @staticmethod
+    def _norm(value: str) -> str:
         # The Portuguese README writes 3,4 where the English one writes 3.4, and
         # a decimal separator is not a claim about the data.
-        if published.strip().replace(",", ".") == computed.strip().replace(",", "."):
+        return value.strip().replace(",", ".")
+
+    def check(self, label: str, published: str, computed: str) -> None:
+        if self._norm(published) == self._norm(computed):
             print(f"ok   {label}: {computed}")
         else:
             self.failures.append(f"{label}: says {published!r}, data says {computed!r}")
             print(f"FAIL {label}: says {published!r}, data says {computed!r}")
+
+    def check_close(self, label: str, published: str, computed: float, tol: float) -> None:
+        """For the bootstrap bounds, which are an estimate rather than a count."""
+        said = float(self._norm(published))
+        if abs(said - computed) <= tol:
+            print(f"ok   {label}: says {said:.0f}, data says {computed:.0f} (within {tol:.0f})")
+        else:
+            self.failures.append(
+                f"{label}: says {said:.0f}, data says {computed:.0f} (tolerance {tol:.0f})")
+            print(f"FAIL {label}: says {said:.0f}, data says {computed:.0f}")
 
 
 def table_rows(text: str, header_fragment: str) -> dict[str, list[str]]:
@@ -210,7 +226,27 @@ def errors(group: pd.DataFrame) -> tuple[float, float]:
             c.rmse(group["model"] - group["actual_pct"]))
 
 
-def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -> None:
+def recall_interval(group: pd.DataFrame, draws: int = 4000, seed: int = 0) -> tuple[float, float]:
+    """95% interval for recall, resampling whole seasons rather than rows.
+
+    A drought hits several states in the same year, so the crop x state rows are
+    not independent draws. Resampling years keeps those clusters intact;
+    resampling rows would report an interval narrower than the data supports.
+    """
+    rng = np.random.default_rng(seed)
+    years = group["harvest_year"].unique()
+    by_year = {year: group[group["harvest_year"] == year] for year in years}
+    rates = []
+    for _ in range(draws):
+        sample = pd.concat([by_year[y] for y in rng.choice(years, len(years), replace=True)])
+        real, flagged = sample["actual_pct"] <= c.FLAG_PCT, sample["model"] <= c.FLAG_PCT
+        if real.sum():
+            rates.append((real & flagged).sum() / real.sum() * 100)
+    return float(np.percentile(rates, 2.5)), float(np.percentile(rates, 97.5))
+
+
+def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, meta: dict,
+              rep: Report) -> None:
     text = (REPO_ROOT / doc.path).read_text(encoding="utf-8")
     # Tables need the line structure; prose does not, and matching it line by line
     # would fail every time a paragraph is rewrapped. Sentences are matched flat.
@@ -219,6 +255,27 @@ def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -
 
     soy = wide[wide["crop_name"] == "SOJA"]
     corn = wide[wide["crop_name"] == "MILHO 2A SAFRA"]
+
+    # --- scale claims in the opening paragraph
+    rep.check(f"{tag} weather rows", prose(flat, doc.weather_rows)[0],
+              f"{meta['weather_rows'] / 1e6:.1f}")
+    said = prose(flat, doc.scale)
+    rep.check(f"{tag} crop x state pairs", said[0],
+              f"{wide.groupby('crop_name')['state_code'].nunique().sum()}")
+    rep.check(f"{tag} seasons scored", said[1], f"{len(wide)}")
+
+    # --- the headline: signal size, then the tie, then where the gain sits
+    said = prose(flat, doc.correlation)
+    rep.check(f"{tag} soybean correlation", said[0], f"{soy['model'].corr(soy['actual_pct']):.2f}")
+    rep.check(f"{tag} corn correlation", said[1], f"{corn['model'].corr(corn['actual_pct']):.2f}")
+
+    soy_base, soy_model = errors(soy)
+    corn_base, corn_model = errors(corn)
+    said = prose(flat, doc.skill)
+    rep.check(f"{tag} soybean global skill", said[0],
+              f"{(soy_base - soy_model) / soy_base * 100:.1f}")
+    rep.check(f"{tag} corn global skill", said[1],
+              f"{(corn_base - corn_model) / corn_base * 100:.1f}")
 
     published = table_rows(text, doc.severity_header)
     for label, band in doc.severity_rows.items():
@@ -231,79 +288,43 @@ def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -
         rep.check(f"{tag} soybean {band} change", cells[3],
                   f"{(model - base) / base * 100:+.0f}{doc.change_suffix}")
 
-    soy_base, soy_model = errors(soy)
-    corn_base, corn_model = errors(corn)
-    said = prose(flat, doc.skill)
-    rep.check(f"{tag} soybean global skill", said[0],
-              f"{(soy_base - soy_model) / soy_base * 100:.1f}")
-    rep.check(f"{tag} corn global skill", said[1],
-              f"{(corn_base - corn_model) / corn_base * 100:.1f}")
-
-    # The share that dilutes the global metric -- the sentence exists to explain
-    # why the average looks like a tie, so a wrong value there is not cosmetic.
-    # It is quoted twice, because the two figures answer different questions and
-    # were once conflated: the soybean table alone says 89 of 161, while the
-    # sample that dilutes RMSE is both crops pooled.
-    counts = wide["severity"].value_counts()
-    rep.check(f"{tag} ordinary-season share", prose(flat, doc.normal_share)[0],
-              f"{counts[NORMAL] / counts.sum() * 100:.0f}")
     said = prose(flat, doc.soy_sample)
     rep.check(f"{tag} soybean ordinary seasons", said[0],
               f"{int((soy['severity'] == NORMAL).sum())}")
     rep.check(f"{tag} soybean seasons", said[1], f"{len(soy)}")
 
-    # The paragraph that walks the reader through two rows retypes four values
-    # out of the table above it. Retyped is exactly how the 55%/48% error got in.
-    for label, pattern, band in ((f"{tag} walkthrough shortfall",
-                                  doc.walkthrough_shortfall, FAILURE),
-                                 (f"{tag} walkthrough normal",
-                                  doc.walkthrough_normal, NORMAL)):
-        group = soy[soy["severity"] == band]
-        base, model = errors(group)
-        said = prose(flat, pattern)
-        rep.check(f"{label} n", said[0], f"{len(group)}")
-        rep.check(f"{label} baseline RMSE", said[1], f"{base:.1f}")
-        rep.check(f"{label} model RMSE", said[2], f"{model:.1f}")
-        if len(said) > 3:  # only the shortfall sentence restates the change
-            rep.check(f"{label} change", said[3], f"{abs((model - base) / base * 100):.0f}")
-
-    said = prose(flat, doc.corn_bands)
-    base, model = errors(soy[soy["severity"] == FAILURE])
-    rep.check(f"{tag} soybean shortfall change (restated)", said[0],
-              f"{(model - base) / base * 100:+.0f}")
-    base, model = errors(corn[corn["severity"] == FAILURE])
-    rep.check(f"{tag} corn shortfall change", said[1], f"{(model - base) / base * 100:+.0f}")
-    base, model = errors(corn[corn["severity"] == NORMAL])
-    rep.check(f"{tag} corn normal-year change", said[2], f"{(model - base) / base * 100:+.0f}")
-
+    # --- the detector, and the base rate without which precision means nothing
     published = table_rows(text, doc.detector_header)
+    rates = {}
     for label, crop in doc.crop_rows.items():
         sub = wide[wide["crop_name"] == crop]
         real, flagged = sub["actual_pct"] <= c.FLAG_PCT, sub["model"] <= c.FLAG_PCT
         hit = int((real & flagged).sum())
         cells = published[label]
-        rep.check(f"{tag} {label} real events", cells[0], f"{int(real.sum())}")
-        rep.check(f"{tag} {label} flagged", cells[1], f"{int(flagged.sum())}")
-        rep.check(f"{tag} {label} correct", cells[2], f"{hit}")
+        rep.check(f"{tag} {label} real shortfalls", cells[0], f"{int(real.sum())}")
+        rep.check(f"{tag} {label} alarms", cells[1], f"{int(flagged.sum())}")
+        rep.check(f"{tag} {label} right", cells[2], f"{hit}")
         rep.check(f"{tag} {label} recall", cells[3], f"{hit / real.sum() * 100:.0f}%")
         rep.check(f"{tag} {label} precision", cells[4], f"{hit / flagged.sum() * 100:.0f}%")
-        rep.check(f"{tag} {label} baseline flags", cells[5],
-                  f"{int((sub['baseline'] <= c.FLAG_PCT).sum())}")
+        rates[crop] = (real.mean() * 100, hit / flagged.sum() * 100)
 
-    # Recall and precision are spelled out underneath with soybean's own counts,
-    # so the reader can see where the percentages come from. Same numbers as the
-    # table, typed a second time -- which is the drift this file exists to catch.
-    real, flagged = soy["actual_pct"] <= c.FLAG_PCT, soy["model"] <= c.FLAG_PCT
-    hit = int((real & flagged).sum())
-    said = prose(flat, doc.soy_recall)
-    rep.check(f"{tag} soybean recall hits", said[0], f"{hit}")
-    rep.check(f"{tag} soybean recall base", said[1], f"{int(real.sum())}")
-    rep.check(f"{tag} soybean recall", said[2], f"{hit / real.sum() * 100:.0f}")
-    said = prose(flat, doc.soy_precision)
-    rep.check(f"{tag} soybean precision hits", said[0], f"{hit}")
-    rep.check(f"{tag} soybean precision base", said[1], f"{int(flagged.sum())}")
-    rep.check(f"{tag} soybean precision", said[2], f"{hit / flagged.sum() * 100:.0f}")
-    rep.check(f"{tag} soybean false alarms", said[3], f"{int((~real & flagged).sum())}")
+    said = prose(flat, doc.base_rate_lift)
+    for i, crop in enumerate(["SOJA", "MILHO 2A SAFRA"]):
+        base_rate, precision = rates[crop]
+        rep.check(f"{tag} {crop} base rate", said[i], f"{base_rate:.0f}")
+        rep.check(f"{tag} {crop} precision (restated)", said[i + 2], f"{precision:.0f}")
+        rep.check(f"{tag} {crop} lift", said[i + 4], f"{precision / base_rate:.1f}")
+
+    # A trend line predicting a bad year would break the whole detector argument,
+    # so the word "zero" is checked against the count rather than trusted.
+    flags = int((wide["baseline"] <= c.FLAG_PCT).sum())
+    rep.check(f"{tag} baseline alarms", prose(flat, doc.baseline_zero)[0],
+              "zero" if flags == 0 else str(flags))
+
+    low, high = recall_interval(soy)
+    said = prose(flat, doc.recall_ci)
+    rep.check_close(f"{tag} soybean recall CI low", said[0], low, CI_TOLERANCE_PP)
+    rep.check_close(f"{tag} soybean recall CI high", said[1], high, CI_TOLERANCE_PP)
 
     # Same cutoff the app uses, and for the same reason: the newest season is
     # CONAB's open estimate, not a harvest. Read from the data, never typed.
@@ -377,13 +398,16 @@ def check_doc(doc: Doc, season: pd.DataFrame, wide: pd.DataFrame, rep: Report) -
 
 
 def main() -> int:
+    import json
+
     season = pd.read_csv(DATA_DIR / "season_risk.csv")
     wide = c.widen(pd.read_csv(DATA_DIR / "backtest.csv"))
+    meta = json.loads((DATA_DIR / "meta.json").read_text(encoding="utf-8"))
     rep = Report()
 
     for doc in DOCS:
         print(f"--- {doc.path} ---")
-        check_doc(doc, season, wide, rep)
+        check_doc(doc, season, wide, meta, rep)
         print()
 
     if rep.failures:
