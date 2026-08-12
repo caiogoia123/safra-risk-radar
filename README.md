@@ -1,5 +1,7 @@
 # Safra Risk Radar
 
+**English** · [Português](README.pt-BR.md)
+
 **[→ Live dashboard](https://safra-risk-radar.streamlit.app)** · rebuilt weekly by CI, from
 CONAB, IBGE and NASA POWER through dbt into BigQuery.
 
