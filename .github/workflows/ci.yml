@@ -47,3 +47,10 @@ jobs:
         run: pip install -r app/requirements.txt
       - name: Build every figure
         run: python app/selftest.py
+
+      - name: Check the README's numbers against the data
+        # Same job because the dependencies are the same: this reads app/data and
+        # reuses app/charts.py, so it costs nothing extra. It fails when a closed
+        # season shifts an aggregate the README quotes -- which happens once a
+        # year, silently, long after anyone last read the file.
+        run: python scripts/check_readme_numbers.py

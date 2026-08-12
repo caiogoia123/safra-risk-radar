@@ -35,7 +35,7 @@ walk-forward 2003–2025, RMSE of the yield residual in percentage points):
 | Good > +20% | 12 | 33.5 | 34.8 | +4% error |
 
 The model earns its keep only when the harvest breaks, and actively hurts in a normal year —
-and normal years are 55% of the sample, which is exactly what dilutes the global metric.
+and normal years are 48% of the sample, which is exactly what dilutes the global metric.
 Second-crop corn repeats the pattern, weaker: -27% error on shortfalls, +68% in normal years.
 
 Read as a detector instead of a forecaster, on seasons finishing 10% or more below trend:
@@ -76,7 +76,7 @@ out-of-sample error:
 - **The *veranico* is not the strong variable it was expected to be.** The dry spell inside the
   critical window — longest run of consecutive dry days, computed by gaps-and-islands over the
   daily series — correlates *worse* with the yield residual than a plain count of dry days
-  (-0.25 against -0.39 on soybean). Thresholds of 1, 2 and 5 mm were tested; the definition is
+  (-0.26 against -0.39 on soybean). Thresholds of 1, 2 and 5 mm were tested; the definition is
   not the problem. It was demoted from a model feature to a descriptive column.
 - Measuring the *whole* spell that merely touches the window was tried and rejected: in Bahia
   the window closes in April, right as the five-month dry season begins, so the metric picked up
@@ -101,7 +101,7 @@ against weather anomaly:
 | Mato Grosso do Sul | +0.39 | -0.51 |
 | Minas Gerais | +0.35 | -0.25 |
 | Paraná | +0.24 | -0.31 |
-| Bahia | +0.22 | -0.52 |
+| Bahia | +0.22 | -0.51 |
 | Goiás | +0.15 | -0.24 |
 | Mato Grosso | +0.13 | -0.40 |
 
@@ -109,10 +109,10 @@ Rio Grande do Sul is roughly four times as rainfall-sensitive as Mato Grosso. A 
 hides this completely: the drought that barely dents Mato Grosso is what breaks a harvest in the
 South. Anyone pricing crop risk off a country-level number is mispricing both states.
 
-The two worst seasons in the series are real events the pipeline found unaided — Rio Grande do
-Sul soybean in 2005 at **-67% against trend** with 17 extra dry days (the 2004/05 drought), and
-Paraná second-crop corn in 2021 at **-51%** with rainfall at **-2.06 standard deviations** (the
-2021 safrinha failure).
+Two failures the pipeline surfaced unaided are recognisable events. The worst soybean season in
+the record is Rio Grande do Sul in 2005, at **-67% against trend** with 17 extra dry days — the
+2004/05 drought. Paraná second-crop corn in 2021 came in at **-51%** with rainfall at **-2.06
+standard deviations**, the 2021 safrinha failure.
 
 ## Architecture
 
